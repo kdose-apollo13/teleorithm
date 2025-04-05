@@ -1,3 +1,18 @@
+"""
+    ~tkml~
+    specify tkinter layouts nicely
+
+    files
+    -----
+    app.tkml
+    leaf.tkml
+
+    economy of directness -> just write the code and exec it
+    each file becomes its own module
+    (eg) leaf.tkml becomes module that defines some creator func
+    communicate using some global Q
+
+"""
 from unittest import main, TestCase
 from klab.lab import measure
 from klab.ututils import Spec, Runner
@@ -12,21 +27,21 @@ from parsimonious.grammar import Grammar
 from parsimonious.nodes import NodeVisitor
 
 
-# with open('tkml.gram', 'rt') as r:
-#     tkml_spec = r.read()
+with open('tkml.gram', 'rt') as r:
+    tkml_spec = r.read()
 
-tkml_spec = r'''
-tkml        = ws block ws
-block       = identifier ws '{' ws item* ws '}'
-item        = (binding / property / block) ws
-property    = identifier ws ':' ws value
-binding     = '|' identifier '|' ws '>>' ws identifier
-value       = identifier / color / number
-identifier  = ~'[a-zA-Z_][a-zA-Z0-9_]*'
-color       = '#' ~'[a-zA-Z0-9]{6}'
-number      = ~'[0-9]+'
-ws          = ~'\\s*'
-'''
+# tkml_spec = r'''
+# tkml        = ws block ws
+# block       = identifier ws '{' ws item* ws '}'
+# item        = (binding / property / block) ws
+# property    = identifier ws ':' ws value
+# binding     = '|' identifier '|' ws '>>' ws identifier
+# value       = identifier / color / number
+# identifier  = ~'[a-zA-Z_][a-zA-Z0-9_]*'
+# color       = '#' ~'[a-zA-Z0-9]{6}'
+# number      = ~'[0-9]+'
+# ws          = ~'\\s*'
+# '''
 
 grammar = Grammar(tkml_spec)
 

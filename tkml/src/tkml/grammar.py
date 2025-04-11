@@ -1,3 +1,6 @@
+"""
+    tkml source -> grammar tree -> component tree -> widget tree (app)
+"""
 from parsimonious.grammar import Grammar
 from parsimonious.exceptions import ParseError
 

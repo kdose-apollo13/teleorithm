@@ -42,9 +42,9 @@ class TKMLVisitor(NodeVisitor):
                         children.append(item)
                     else:
                         props.update(item)
-        widget = {'type': name, 'props': props, 'children': children}
-        print(f"Returning widget from visit_block for {name}: {widget}")
-        return widget
+        component = {'type': name, 'props': props, 'children': children}
+        print(f"Returning component from visit_block for {name}: {component}")
+        return component
 
     def visit_item(self, node, visited):
         print(f"visit_item visited: {visited}")

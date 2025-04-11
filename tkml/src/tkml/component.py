@@ -25,8 +25,8 @@ class TKMLVisitor(NodeVisitor):
                         children.append(item)
                     else:
                         props.update(item)
-        widget = {'type': name, 'props': props, 'children': children}
-        return widget
+        component = {'type': name, 'props': props, 'children': children}
+        return component
 
     def visit_item(self, node, visited):
         return visited[0]
@@ -53,10 +53,28 @@ class TKMLVisitor(NodeVisitor):
         return visited or node.text
 
 
+def infer_component_tree(grammar_tree, visitor):
+    """
+        grammar_tree
+            : parsimonious.nodes.Node
+        
+        visitor
+            : parsimonious.nodes.NodeVisitor
+
+        returns
+            -> dict
+    """
+    try:
+        comp_tree = visitor.visit(grammar_tree)
+    except Exception as e:
+        raise e
+    else:
+        return comp_tree
+
 if __name__ == '__main__':
     t = grow_tree('Name {}')
-    spec = TKMLVisitor().visit(t)
-    assert spec == {
+    comps = infer_component_tree(t, TKMLVisitor())
+    assert comps == {
         'type': 'Name',
         'props': {},
         'children': []

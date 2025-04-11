@@ -19,11 +19,20 @@ number      = ~"[0-9]+"
 ws          = ~"\\s*"
 '''
 
+EXAMPLE_SOURCE = '''
+Block {
+    a_string: "a string value"
+    a_number: 31
+    Nested { v: #123ABC }
+}
+'''
 
-def construct_grammar(source):
+
+def grammify(s):
     """
-        source
+        s
             : str
+            : PEG grammar
 
         returns
             -> parsimonious.grammar.Grammar
@@ -32,17 +41,18 @@ def construct_grammar(source):
             -> ValueError
     """
     try:
-        g = Grammar(source)
+        g = Grammar(s)
     except Exception as e:
         raise ValueError(e)
     else:
         return g
 
 
-def parse_source(s, grammar):
+def parse(source, grammar):
     """
-        s
+        source
             : str
+            : grammar-compliant source text
 
         grammar
             : parsimonious.grammar.Grammar
@@ -55,30 +65,13 @@ def parse_source(s, grammar):
             -> ValueError
     """
     try:
-        tree = grammar.parse(s)
+        tree = grammar.parse(source)
     except ParseError as e:
         raise ValueError(e)
     return tree
 
 
-def grow_tree(source):
-    """
-        source
-            : str
-            : tkml source
-
-        returns
-            -> parsimonious.nodes.Node
-            -> root node of tree of successful grammar matches
-
-        raises
-            -> ValueError if source was not valid according to present grammar
-    """
-    g = construct_grammar(TKML_GRAMMAR)
-    tree = parse_source(source, g)
-    return tree
-    
 if __name__ == '__main__':
-    t = grow_tree('Name {}')
-    print(t.prettily())
+    tree = parse(EXAMPLE_SOURCE, grammify(TKML_GRAMMAR))
+    # print(tree)
 

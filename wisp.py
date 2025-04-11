@@ -2,16 +2,6 @@
     ~tkml~
     specify tkinter layouts nicely
 
-    files
-    -----
-    app.tkml
-    leaf.tkml
-
-    economy of directness -> just write the code and exec it
-    each file becomes its own module
-    (eg) leaf.tkml becomes module that defines some creator func
-    communicate using some global Q
-
 """
 from unittest import main, TestCase
 from klab.lab import measure
@@ -27,27 +17,45 @@ from parsimonious.grammar import Grammar
 from parsimonious.nodes import NodeVisitor
 
 
-with open('tkml.gram', 'rt') as r:
-    tkml_spec = r.read()
+# with open('tkml.gram', 'rt') as r:
+#     tkml_spec = r.read()
 
-# tkml_spec = r'''
-# tkml        = ws block ws
-# block       = identifier ws '{' ws item* ws '}'
-# item        = (binding / property / block) ws
-# property    = identifier ws ':' ws value
-# binding     = '|' identifier '|' ws '>>' ws identifier
-# value       = identifier / color / number
-# identifier  = ~'[a-zA-Z_][a-zA-Z0-9_]*'
-# color       = '#' ~'[a-zA-Z0-9]{6}'
-# number      = ~'[0-9]+'
-# ws          = ~'\\s*'
-# '''
+tkml_spec = r'''
+tkml        = ws block ws
+block       = identifier ws '{' ws item* ws '}'
+item        = (binding / property / block) ws
+property    = identifier ws ':' ws value
+binding     = '|' identifier '|' ws '>>' ws identifier
+value       = file / identifier / color / number
+file        = identifier '.' identifier
+identifier  = ~'[a-zA-Z_][a-zA-Z0-9_]*'
+color       = '#' ~'[a-zA-Z0-9]{6}'
+number      = ~'[0-9]+'
+ws          = ~'\\s*'
+'''
 
 grammar = Grammar(tkml_spec)
 
+leaf = '''
+Leaf {
+    Canvas {
+        row: 0
+        col: 0
+        width: 50
+        height: 100
+        highlightthickness: 0
+        background: #1144EE
+    }
+}
+'''
+
 tkml = '''
 Tk {
+    script: leafapp.py
+    styles: leafstyles.py
+
     location: right_half
+    |Tab| >> on_Tab
 
     Canvas {
         row: 0
@@ -66,13 +74,12 @@ Tk {
         highlightthickness: 0
         background: #DD22FF
     }
-
-    |Tab| >> on_Tab
 }
 '''
 
 tree = grammar.parse(tkml)
 # print(tree)
+leaf = grammar.parse(leaf)
 
 class Node:
     def __init__(self, name, binds, props, childs):
@@ -110,6 +117,9 @@ class TKMLVisitor(NodeVisitor):
         item = visited[0][0]
         return item
 
+    def visit_file(self, node, visited):
+        return f'{visited[0]}.{visited[2]}'
+
     def visit_property(self, node, visited):
         key = visited[0]
         value = visited[4]
@@ -140,6 +150,7 @@ class TKMLVisitor(NodeVisitor):
 visitor = TKMLVisitor()
 ast = visitor.visit(tree)
 # print(ast)
+leaf_ast = visitor.visit(leaf)
 
 
 def parse_tkml_ast(buffer, name_it, node, parent):

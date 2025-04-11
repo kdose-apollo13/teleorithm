@@ -3,8 +3,8 @@ requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "klab"
-version = "0.0.2"
+name = "tkml"
+version = "0.1"
 requires-python = ">= 3.12"
-description = "tools for measuring code performance"
+description = "[ html, css, js] -> [ tkml, toml, py ]"
 

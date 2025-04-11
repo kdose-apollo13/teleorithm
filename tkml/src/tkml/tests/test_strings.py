@@ -10,7 +10,8 @@ from parsimonious.nodes import Node
 from parsimonious.grammar import Grammar
 
 from wisp import tkml_grammar, parse_source
-from strings import valid_strings
+# from tkml.strings import valid_strings
+from tkml import valid_strings, grammar, parse
 
 from tkml_utils import node_iter, node_counter
 

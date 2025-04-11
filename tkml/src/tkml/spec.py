@@ -3,48 +3,9 @@
 
     TODO: number include float in grammar
 """
-from parsimonious.grammar import Grammar
 from parsimonious.nodes import NodeVisitor
-from parsimonious.exceptions import ParseError
 
-
-# TODO: why nested r-strings?
-grammar_text = r'''
-tkml        = ws block ws
-block       = identifier ws "{" ws item* ws "}"
-item        = (property / block) ws
-property    = identifier ws ":" ws value
-value       = string / identifier / color / number
-string      = ~r'"([^\n"\\]|(\\[^\\]))*"' / ~r"'([^\n'\\]|(\\[^\\]))*'"
-identifier  = ~"[a-zA-Z_][a-zA-Z0-9_]*"
-color       = "#" ~"[a-zA-Z0-9]{6}"
-number      = ~"[0-9]+"
-ws          = ~"\\s*"
-'''
-
-tkml_grammar = Grammar(grammar_text)
-
-
-def parse_source(s, grammar):
-    """
-        s
-            : str
-            : tkml source text
-
-        grammar
-            : parsimonious.grammar.Grammar
-
-        returns
-            -> parsimonious.nodes.Node
-
-        raises
-            -> ValueError when parsing fails
-    """
-    try:
-        tree = grammar.parse(s)
-    except ParseError as e:
-        raise ValueError(e)
-    return tree
+from tkml.grammar import grow_tree
 
 
 class TKMLVisitor(NodeVisitor):
@@ -91,4 +52,13 @@ class TKMLVisitor(NodeVisitor):
     def generic_visit(self, node, visited):
         return visited or node.text
 
+
+if __name__ == '__main__':
+    t = grow_tree('Name {}')
+    spec = TKMLVisitor().visit(t)
+    assert spec == {
+        'type': 'Name',
+        'props': {},
+        'children': []
+    }
 

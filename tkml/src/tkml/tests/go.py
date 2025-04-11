@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 from unittest import defaultTestLoader
 from klab.ututils import Runner
 

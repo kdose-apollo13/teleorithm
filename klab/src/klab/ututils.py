@@ -17,19 +17,20 @@ import re
 from textwrap import dedent
 from unittest import main, TestCase, TextTestRunner, TextTestResult
 
-
 def extract_names(s):
     """
-        s
-            : str
-            : <__main__.TestOneTwo testMethod=test_three_four>
+    s
+        : str
+        : (eg) <__main__.TestOneTwo testMethod=test_three_four>
+        : (eg) <tests.test_grammar.TestSomething testMethod=test_something_else>
 
-        returns
-            -> tuple[str]
-            -> module, class, method
-            -> (eg) ('__main__', 'TestOneTwo', 'test_three_four')
+    returns
+        -> tuple[str]
+        -> module, class, method
+        -> (eg) ('__main__', 'TestOneTwo', 'test_three_four')
+        -> (eg) ('tests.test_grammar', 'TestSomething', 'test_something_else')
     """
-    pattern = r'<(\w+)\.(\w+) testMethod=(\w+)>'
+    pattern = r'<([\w\.]+)\.(\w+) testMethod=(\w+)>'
     m = re.match(pattern, s)
     if m:
         return m.groups()

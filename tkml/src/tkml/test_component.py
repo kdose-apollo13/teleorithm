@@ -38,12 +38,12 @@ class test_single_and_multiline_sources(Spec):
         self.equa(tree_single, tree_multi)
         
 
-class test_grammar_tree_when_combed_with_NodeFilter(Spec):
+class test_TKML_grammar_tree_when_combed_with_TKMLFilter(Spec):
     def setUp(self):
         self.tree = tkml_tree('Name {}')
         self.node_filter = TKMLFilter()
     
-    def test_return_dict(self):
+    def test_returns_dict(self):
         d = comb_for_components(self.tree, self.node_filter)
         self.asrt(isinstance(d, dict))
 
@@ -55,6 +55,40 @@ class test_grammar_tree_when_combed_with_NodeFilter(Spec):
                 'type': 'Name',
                 'props': {},
                 'children': []
+            }
+        )
+
+class test_TKML_example_grammar_tree_combed_with_TKMLFilter(Spec):
+    def setUp(self):
+        self.s = dedent('''
+        Block {
+            prop_1: "some string"
+            prop_2: #AA2233
+            Inner {
+                prop_3: 31
+            }
+        }
+        ''')
+        self.node_filter = TKMLFilter()
+
+    def test_returns_expected_component_dict(self):
+        tree = tkml_tree(self.s)
+        comps = comb_for_components(tree, self.node_filter)
+        self.equa(
+            comps,
+            {
+                'type': 'Block',
+                'props': {
+                    'prop_1': 'some string',
+                    'prop_2': '#AA2233'
+                },
+                'children': [
+                    {
+                        'type': 'Inner',
+                        'props': { 'prop_3': 31 },
+                        'children': []
+                    }
+                ]
             }
         )
 

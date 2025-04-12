@@ -126,6 +126,7 @@ class test_empty_block_with_whitespace(Spec):
         tree = tkml_tree(self.s)
         self.equa(count_nodes(tree), 11)
 
+
 class test_block_with_and_without_whitespace(Spec):
     def setUp(self):
         self.spacious = ' Name {  } '
@@ -136,6 +137,9 @@ class test_block_with_and_without_whitespace(Spec):
             count_nodes(tkml_tree(self.spacious)),
             count_nodes(tkml_tree(self.compact))
         )
+
+    def test_spacious_and_compact_trees_differ_somehow(self):
+        self.asrt(tkml_tree(self.spacious) != tkml_tree(self.compact))
 
 
 if __name__ == '__main__':

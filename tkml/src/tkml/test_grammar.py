@@ -1,3 +1,6 @@
+"""
+    | teleorithm |
+"""
 from unittest import main, TestCase
 from klab.ututils import Spec, Runner
 
@@ -6,7 +9,8 @@ from parsimonious.grammar import Grammar
 
 from textwrap import dedent
 
-from tkml.grammar import TKML_GRAMMAR, grammify, parse
+from tkml.grammar import TKML_GRAMMAR, grammify, parse, tkml_tree
+from tkml.utils import count_nodes
 
 
 class test_TKML_grammar_string_when_grammified(Spec):
@@ -30,7 +34,7 @@ class test_empty_grammar_string_when_grammified(Spec):
         self.asrt(isinstance(g, Grammar))
         
 
-class test_minimal_grammar_string_when_grammified(Spec):
+class test_trivial_grammar_string_when_grammified(Spec):
     def setUp(self):
         self.s = 'root = "static"'
 
@@ -40,7 +44,7 @@ class test_minimal_grammar_string_when_grammified(Spec):
 
 
 # TODO: keep going with this, actual unicode
-class test_unicode_somewhere_string_when_grammified(Spec):
+class test_unicode_range_string_when_grammified(Spec):
     def setUp(self):
         self.s = dedent(r'''
         root = text ws "!"
@@ -53,7 +57,7 @@ class test_unicode_somewhere_string_when_grammified(Spec):
         self.asrt(isinstance(g, Grammar))
 
 
-class test_source_string_and_grammar_when_parsed(Spec):
+class test_trivial_source_string_and_grammar_when_parsed(Spec):
     def setUp(self):
         gstring = 'root = "static"'
         self.grammar = grammify(gstring)
@@ -85,7 +89,55 @@ class test_source_string_and_grammar_when_parsed(Spec):
         self.asrt(True)
 
 
+class test_bad_tkml(Spec):
+    """
+        TODO: identify specific error and location in source for helpful debug msgs
+    """
+    def setUp(self):
+        self.s = 'Name [ prop: wrong_braces ]'
+
+    def test_raises_ValueError_on_unparseable_source(self):
+        with self.rais(ValueError):
+            tree = tkml_tree(self.s)
+
+
+class test_empty_block_without_whitespace(Spec):
+    def setUp(self):
+        self.s = 'Name{}'
+
+    def test_parses_into_Node_tree(self):
+        tree = tkml_tree(self.s)
+        self.asrt(isinstance(tree, Node))
+
+    def test_tree_has_11_nodes(self):
+        tree = tkml_tree(self.s)
+        self.equa(count_nodes(tree), 11)
+
+
+class test_empty_block_with_whitespace(Spec):
+    def setUp(self):
+        self.s = '   Name {   }     '
+
+    def test_parses_into_Node_tree(self):
+        tree = tkml_tree(self.s)
+        self.asrt(isinstance(tree, Node))
+
+    def test_tree_has_11_nodes(self):
+        tree = tkml_tree(self.s)
+        self.equa(count_nodes(tree), 11)
+
+class test_block_with_and_without_whitespace(Spec):
+    def setUp(self):
+        self.spacious = ' Name {  } '
+        self.compact = 'Name{}'
+
+    def test_have_same_node_quantity(self):
+        self.equa(
+            count_nodes(tkml_tree(self.spacious)),
+            count_nodes(tkml_tree(self.compact))
+        )
+
+
 if __name__ == '__main__':
     main(testRunner=Runner)
-
 

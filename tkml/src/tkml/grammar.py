@@ -1,5 +1,8 @@
 """
-    tkml source -> grammar tree -> component tree -> widget tree (app)
+    | teleorithm |
+
+    source -> grammar tree -> component tree -> widget tree (app)
+    tkml   -> tkml tree    -> component tree -> widget tree (app)
 """
 from parsimonious.grammar import Grammar
 from parsimonious.exceptions import ParseError
@@ -71,7 +74,12 @@ def parse(source, grammar):
     return tree
 
 
+def tkml_tree(source):
+    return parse(source, grammify(TKML_GRAMMAR))
+
+
 if __name__ == '__main__':
-    tree = parse(EXAMPLE_SOURCE, grammify(TKML_GRAMMAR))
-    # print(tree)
+    node = parse(EXAMPLE_SOURCE, grammify(TKML_GRAMMAR))
+    tree = tkml_tree(EXAMPLE_SOURCE)
+    assert node == tree
 

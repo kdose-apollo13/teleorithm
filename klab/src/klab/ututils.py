@@ -31,7 +31,10 @@ def extract_names(s):
     """
     pattern = r'<(\w+)\.(\w+) testMethod=(\w+)>'
     m = re.match(pattern, s)
-    return m.groups()
+    if m:
+        return m.groups()
+    else:
+        raise ValueError
 
 
 def scrub(s):
@@ -80,7 +83,12 @@ class Result(TextTestResult):
         super().startTest(t)
 
         s = repr(t)
-        names = extract_names(s)
+        try:
+            names = extract_names(s)
+        except ValueError:
+            # think this is when the go loader gets snarled by failing imports
+            raise Exception('what is happening here?')
+
         mod, cls, meth = (scrub(n) for n in names)
         cls, meth = (space(s) for s in (cls, meth))
 

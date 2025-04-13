@@ -1,6 +1,20 @@
 from tkinter import *
 
 
+def create_app(spec):
+    app = Tk()
+    app.title("TKML App")
+    app.geometry("400x800")
+    app.grid_columnconfigure(0, weight=1) # Make the first column expandable
+    app.grid_rowconfigure(0, weight=1)    # Make the first row expandable
+
+    for i, child in enumerate(spec.get("children", [])):
+        component = create_component(child, app)
+        if component:
+            component.grid(row=i, column=0, sticky="nsew")
+
+    return app
+
 def outer_frame(parent):
     frame = Frame(parent)
     # The canvas shall expand with the frame
@@ -35,6 +49,8 @@ def create_scrollable(spec, parent):
     print(f"Creating Scrollable component, parent: {parent}")
 
     container = outer_frame(parent)
+    container.grid(row=0, column=0, sticky="nsew")
+
     view = viewport_canvas(container)
     content = inner_frame(view)
     view.create_window((0, 0), window=content, anchor="nw")
@@ -50,28 +66,32 @@ def create_scrollable(spec, parent):
     return container
 
 def create_component(spec, parent):
-    if spec.get("type") == "Label":
+    if spec['type'] == 'App':
+        app = Tk()
+        t = spec['props']['title']
+        app.title(t)
+        return app
+    elif spec['type'] == 'Scrollable':
+        s = create_scrollable(spec, parent)
+        return s     
+    elif spec.get("type") == "Label":
         return Label(parent, text=spec.get("text", "Default Label"))
     elif spec.get("type") == "Button":
         return Button(parent, text=spec.get("text", "Default Button"))
     return None
 
-if __name__ == '__main__':
-    root = Tk()
-    root.title("Scrollable Example")
 
-    scrollable_spec = {
-        "type": "Scrollable",
-        "children": [
-            {"type": "Label", "text": f"Label {i}"} for i in range(50)
+if __name__ == '__main__':
+    spec = {
+        'type': 'App',
+        'props': {'title': 'Some Title for App'},
+        'children': [
+            {
+                'type': 'Scrollable',
+                'children': [{"type": "Label", "text": f"Label {i}"} for i in range(50)]
+            }
         ]
     }
-
-    scrollable_widget = create_scrollable(scrollable_spec, root)
-    scrollable_widget.grid(row=0, column=0, sticky="nsew") # Let the scrollable widget fill the root
-
-    root.grid_columnconfigure(0, weight=1) # The root shall yield space to its children
-    root.grid_rowconfigure(0, weight=1)    # In both dimensions, space shall be given
-
-    root.mainloop()
+    app = create_app(spec)
+    app.mainloop()
 

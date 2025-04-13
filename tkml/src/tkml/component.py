@@ -17,6 +17,7 @@ class TKMLFilter(NodeVisitor):
         items = visited[4]  # item*
         props = {}
         children = []
+        # TODO: clean this up
         for item_list in items:
             if item_list:
                 item = item_list[0]

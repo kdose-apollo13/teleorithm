@@ -13,6 +13,8 @@ from tkml.grammar import tkml_tree
 from tkml.component import comb_for_components, TKMLFilter
 from tkml.utils import count_nodes
 
+from tkinter import *
+
 
 class test_curly_braces_within_an_f_string(Spec):
     def setUp(self):
@@ -31,6 +33,9 @@ class test_single_and_multiline_sources(Spec):
 
         self.multi = dedent('''\
         Name {}''')
+
+    def test_represent_same_value(self):
+        self.equa(self.single, self.multi)
 
     def test_have_identical_trees(self):
         tree_single = tkml_tree(self.single)
@@ -91,6 +96,32 @@ class test_TKML_example_grammar_tree_combed_with_TKMLFilter(Spec):
                 ]
             }
         )
+
+class test_TKML_source_to_tk_widget(Spec):
+    def setUp(self):
+        self.s = dedent('''
+        App {
+            title: "Test App"
+            geometry: "800x600+0+0"
+        }
+
+        ''')
+        self.node_filter = TKMLFilter()
+        
+    def test_something(self):
+        tree = tkml_tree(self.s)
+        comps = comb_for_components(tree, self.node_filter)
+
+        def create_Tk(comp, parent):
+            # minimal app -> Tk, title, geometry, grid
+            props = comp['props']
+            root = Tk()
+            root.geometry(props['geometry'])
+            return root
+
+        r = create_Tk(comps, None)
+        # r.mainloop()
+        self.asrt(True)
 
 
 if __name__ == '__main__':

@@ -1,6 +1,7 @@
 """
     it's like wisp3, but in the style of wisp4
 """
+from enum import Enum
 from itertools import pairwise
 from tkinter import *
 from textwrap import dedent
@@ -8,11 +9,8 @@ from textwrap import dedent
 from tkml.grammar import tkml_tree
 from tkml.component import comb_for_components as simplify, TKMLFilter
 
-# from kdose import linked_list as kll
-import k_linked_list as kll
-
-from enum import Enum
-
+# TDD in reverse -> haven't written the tests yet 
+# but already importing from them - *time pincer*
 from test_wisp5 import consume, first, last, nexx, prev
 
 
@@ -26,20 +24,6 @@ class Context:
         self.mode = Mode.Normal
         self.leaves = []
         self.focused = None
-    
-
-def update_focus():
-
-    global mode
-
-    for i, leaf in enumerate(leaves):
-        if i == focused_index[0]:
-            if mode == "normal":
-                leaf.hili_ref.config(bg="blue")
-            elif mode == "insert":
-                leaf.hili_ref.config(bg="green")
-        else:
-            leaf.hili_ref.config(bg="gray")
 
 # --------------------------------------------------------------------
 
@@ -52,39 +36,68 @@ def leaf_container(parent):
 def leaf_hili(parent):
     hl = Canvas(parent, width=10, bg='gray', highlightthickness=0)
     hl.grid(row=0, column=0, sticky='ns')
+    return hl
 
-# def leaf_textbox(parent):
-    
-    
+def leaf_textbox(parent, props):
+    t = Text(parent, height=4, width=90, wrap='word', state=DISABLED)
+    t.insert('1.0', props.get('text', ''))
+    t.grid(row=0, column=1, sticky='ew')
+    return t
 
 def create_leaf(spec, parent, context):
     props = spec.get("props", {})
     container = leaf_container(parent) 
     hili = leaf_hili(container)
     container.hili_ref = hili
-
-    textbox = Text(container, height=2, width=90, wrap='word', state=DISABLED)
-    textbox.insert('1.0', props.get('text', ''))
-    textbox.grid(row=0, column=1, sticky='ew')
-    container.text_ref = textbox
-
+    textbox = leaf_textbox(container, props)
+    container.textbox_ref = textbox
     return container
 
 # --------------------------------------------------------------------
+
+def normal_mode_colorize_hilis(context):
+    c = context
+    for l in c.leaves:
+        if l is c.focused:
+            l.hili_ref.config(bg='blue')
+        else:
+            l.hili_ref.config(bg='gray')
 
 def select_next_leaf(context):
     c = context
     n = nexx(c.focused, c.leaves) or last(c.leaves)
     c.focused = n
+    print(n)
     return n
-
 
 def select_prev_leaf(context):
     c = context
     p = prev(c.focused, c.leaves) or first(c.leaves)
     c.focused = p
+    print(p)
     return p
         
+def enter_focused_leaf(context):
+    c = context
+    for leaf in c.leaves:
+        if leaf is c.focused:
+            t = leaf.textbox_ref
+            t.config(state=NORMAL)
+            t.focus_set()
+            leaf.hili_ref.config(bg='green')
+        else:
+            leaf.hili_ref.config(bg='gray')
+
+def exit_focused_leaf(context):
+    c = context
+    for leaf in c.leaves:
+        if leaf is c.focused:
+            t = leaf.textbox_ref
+            t.config(state=DISABLED)
+            app.focus_set()
+            leaf.hili_ref.config(bg='blue')
+        else:
+            leaf.hili_ref.config(bg='gray')
     
 def create_app(spec, context):
     app = Tk()
@@ -99,47 +112,19 @@ def create_app(spec, context):
     def on_key(e):
         if context.mode == Mode.Normal:
             if e.char == 'j':
-                select_next_leaf(context)
+                l = select_next_leaf(context)
+                normal_mode_colorize_hilis(context)
             elif e.char == 'k':
                 select_prev_leaf(context)
+                normal_mode_colorize_hilis(context)
             elif e.char == 'i':
-                mode = 'insert'
-                print('oh crah')
-
-    def on_key2(event):
-        global mode
-        if mode == "normal":
-            if event.char == "j":
-                focused_index[0] = min(focused_index[0] + 1, len(leaves) - 1)
-                update_focus()
-                print(f"Normal Mode: Focused index: {focused_index[0]}")
-            elif event.char == "k":
-                focused_index[0] = max(focused_index[0] - 1, 0)
-                update_focus()
-                print(f"Normal Mode: Focused index: {focused_index[0]}")
-            elif event.char == "i":
-                mode = "insert"
-                update_focus() # Update highlight for insert mode
-                if leaves:
-                    focused_leaf = leaves[focused_index[0]]
-                    # Find the Text widget within the focused Leaf
-                    text_widget = focused_leaf.winfo_children()[1] # Assuming Text is the second child
-                    text_widget.config(state=NORMAL)
-                    text_widget.focus_set()
-                print("Switched to Insert Mode")
-        elif mode == "insert":
-            if event.keysym == "Escape":
-                mode = "normal"
-                update_focus()
-                if leaves:
-                    focused_leaf = leaves[focused_index[0]]
-                    text_widget = focused_leaf.winfo_children()[1]
-                    text_widget.config(state=DISABLED)
-                    app.focus_set() # Set focus back to the app for normal mode navigation
-                print("Switched to Normal Mode")
-            else:
-                # Let the Text widget handle other key presses in insert mode
-                pass
+                context.mode = Mode.Insert
+                enter_focused_leaf(context)
+        elif context.mode == Mode.Insert:
+            if e.keysym == 'Escape':
+                context.mode = Mode.Normal
+                exit_focused_leaf(context)
+                normal_mode_colorize_hilis(context)
 
     app.bind("<Key>", on_key)
 
@@ -148,9 +133,9 @@ def create_app(spec, context):
         if component:
             component.grid(row=i, column=0, sticky="nsew")
 
-    # app.after(100, update_focus)  # Initial focus
     context.focused = first(context.leaves)
-    print(context.focused)
+    normal_mode_colorize_hilis(context)
+
     return app
 
 # --------------------------------------------------------------------

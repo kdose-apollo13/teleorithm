@@ -3,7 +3,8 @@ from tkinter import *
 
 def create_app(spec):
     app = Tk()
-    app.title("TKML App")
+    t = spec['props']['title']
+    app.title(t)
     app.geometry("400x800")
     app.grid_columnconfigure(0, weight=1) # Make the first column expandable
     app.grid_rowconfigure(0, weight=1)    # Make the first row expandable
@@ -67,13 +68,9 @@ def create_scrollable(spec, parent):
 
 def create_component(spec, parent):
     if spec['type'] == 'App':
-        app = Tk()
-        t = spec['props']['title']
-        app.title(t)
-        return app
+        return create_app(spec)
     elif spec['type'] == 'Scrollable':
-        s = create_scrollable(spec, parent)
-        return s     
+        return create_scrollable(spec, parent)
     elif spec.get("type") == "Label":
         return Label(parent, text=spec.get("text", "Default Label"))
     elif spec.get("type") == "Button":
@@ -88,10 +85,12 @@ if __name__ == '__main__':
         'children': [
             {
                 'type': 'Scrollable',
-                'children': [{"type": "Label", "text": f"Label {i}"} for i in range(50)]
+                'children': [
+                    {"type": "Label", "text": f"Label {i}"} for i in range(50)
+                ]
             }
         ]
     }
-    app = create_app(spec)
+    app = create_component(spec, None)
     app.mainloop()
 

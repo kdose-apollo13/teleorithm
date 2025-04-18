@@ -4,20 +4,19 @@
     -> avoids overhead of python class mechanics
     -> divides concept of node over list indices
     
-    faster than naive class implementation
-    much slower than deque-based
+    trounces naive class impl
+    trounced by deque
 
     local references to the list (eg) next = ll['next']
     are more legible for logic - and faster ->
     ~ 16 % less time, TODO: check bytecode for clues
+    TODO: and make it easy to view/compare bytecodes
     
     from this tome ->
     ---------------------------------------------------
     'Introduction to Algorithms - 2nd Edition' p204-212
     -Cormen, Leiserson, Rivest, Stein
     ---------------------------------------------------
-
-    TODO: circular, docs, subtleties
 """
 
 def new_ll(size):

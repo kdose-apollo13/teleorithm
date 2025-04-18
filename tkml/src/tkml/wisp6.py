@@ -2,6 +2,7 @@
     it's like wisp3, but in the style of wisp4
 """
 from enum import Enum
+from functools import partial
 from itertools import pairwise
 from tkinter import *
 from textwrap import dedent
@@ -41,8 +42,6 @@ class Context:
         self.mode = Mode.Normal
         self.leaves = []
         self.focused = None
-
-# --------------------------------------------------------------------
 
 
 
@@ -128,21 +127,6 @@ def exit_focused_leaf(context):
         else:
             leaf.hili_ref.config(bg='gray')
 
-def capture_widget_tree(parent):
-    widget_info = {"type": str(parent)}
-    parts_info = []
-    for child in parent.winfo_parts():
-        parts_info.append(capture_widget_tree(child))
-    if parts_info:
-        widget_info["parts"] = parts_info
-
-    # Extract specific attributes based on widget type
-    # if isinstance(parent, Text):
-    #     widget_info["text"] = parent.get("1.0", END)
-    # elif isinstance(parent, Label) or isinstance(parent, Button):
-    #     widget_info["text"] = parent.cget("text")
-
-    return widget_info
 
 def create_app(spec, context):
     app = Tk()
@@ -261,11 +245,27 @@ def create_component(spec, parent, context):
     else:
         return None
 
+def viz_spec(spec, indent=0):
+    type_info = spec.get('type', '')
+    props = spec.get('props', {})
+    parts = spec.get('parts', {})
+    
+    if type_info:
+        print(' ' * indent, type_info)
+    for k, v in props.items():
+        if isinstance(v, dict):
+            viz_spec(spec['props'][k])
+        else:
+            print(' ' * (indent + 2), k, v)
+    for part in parts:
+        viz_spec(part, indent + 2)
 
 # only the App gets created, everything before just mapped
 source = dedent('''
     Tkml {
-        meta: 'failure is inevitable'
+        script: 'leafapp.py'
+        style: 'leafapp.toml'
+        comps: 'leafcomps.tkml'
 
         Scrollable {
             Frame {
@@ -296,41 +296,102 @@ source = dedent('''
         }
 
         App {
-            script: 'leafapp.py'
-            style: 'leafapp.toml'
-            comps: 'leafcomps.tkml'
+            title: 'Failure Is Inevitable'
             Scrollable {
                 Leaf { id: l1 text: "Leaf One" }
                 Leaf { id: l2 text: "Leaf Two" }
                 Leaf { id: l3 text: "Leaf Three" }
             }
         }
-        
     }
 ''')
+
+def capture_widget_tree(parent):
+    widget_info = {"type": str(parent)}
+    parts_info = []
+    for child in parent.winfo_children():
+        parts_info.append(capture_widget_tree(child))
+    if parts_info:
+        widget_info["parts"] = parts_info
+
+    # Extract specific attributes based on widget type
+    # if isinstance(parent, Text):
+    #     widget_info["text"] = parent.get("1.0", END)
+    # elif isinstance(parent, Label) or isinstance(parent, Button):
+    #     widget_info["text"] = parent.cget("text")
+
+    return widget_info
+
+
+def create_widget(tk_class, spec, base):
+    w = tk_class(base)
+    for subspec in spec['parts']:
+        create_component(subspec, w)
+    return w
+
+
+def create_component(spec, base):
+    t = spec['type']
+    if t in mapping:
+        return mapping[t](spec, base)
+    else:
+        for p in spec['parts']:
+            return create_component(p, base)
+
+def create_app(spec, base):
+    root = Tk()
+    props = spec.get('props', {})
+    t = props.get('title', 'default')
+    root.title(t)
+    root.geometry("400x800")
+    root.mainloop()
+
+def create_tkml(spec):
+    # load files
+    # create components
+    # run app
+    ...
+    props = spec.get('props', {})
+    script_file = props.get('script', '')
+    style_file = props.get('style', '')
+    comps_file = props.get('comps', '')
+    
+    parts = spec.get('parts', [])
+
+    def centrifuge(tkml_parts):
+        buffer = []
+        for spec in tkml_parts:
+            if spec['type'] == 'App':
+                yield spec
+            else:
+                buffer.append(spec)
+        yield from buffer
+            
+    app, *comps = centrifuge(parts)
+    # ensure parses comps first
+    # create_component will try first part (ie) parts[0]
+    spec['parts'] = [*comps, app]
+    tkml_runtime = create_component(app, None)
+    
+
+mapping = {
+    'Frame': partial(create_widget, Frame),
+    'Canvas': partial(create_widget, Canvas),
+    'Scrollbar': partial(create_widget, Scrollbar),
+    'App': create_app,
+}
 
 if __name__ == '__main__':
     tree = tkml_tree(source)
     f = TKMLFilter()
     spec = simplify(tree, f)
-    context = Context()
-    app = create_component(spec, None, context)
+    # viz_spec(spec)
+    create_tkml(spec)
+    # widget_tree = capture_widget_tree(app)
+    # print(widget_tree)
+
+    # context = Context()
+    # app = create_component(spec, None, context)
     # app.mainloop()
 
-    def viz_spec(spec, indent=0):
-        type_info = spec.get('type', '')
-        props = spec.get('props', {})
-        parts = spec.get('parts', {})
-        
-        if type_info:
-            print(' ' * indent, type_info)
-        for k, v in props.items():
-            if isinstance(v, dict):
-                viz_spec(spec['props'][k])
-            else:
-                print(' ' * (indent + 2), k, v)
-        for part in parts:
-            viz_spec(part, indent + 2)
-
-    viz_spec(spec)
     

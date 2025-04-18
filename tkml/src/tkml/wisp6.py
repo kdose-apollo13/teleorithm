@@ -9,7 +9,7 @@ from textwrap import dedent
 from tkml.grammar import tkml_tree
 from tkml.component import comb_for_components as simplify, TKMLFilter
 
-# TDD in reverse -> haven't written the tests yet 
+# TDD in reverse -> haven't written the tests yet
 # but already importing from them - *time pincer*
 from test_wisp5 import first, last, nexx, prev
 
@@ -44,6 +44,10 @@ class Context:
 
 # --------------------------------------------------------------------
 
+
+
+# --------------------------------------------------------------------
+
 def leaf_container(parent):
     f = Frame(parent, bd=1, relief='solid')
     # text box expands
@@ -63,7 +67,7 @@ def leaf_textbox(parent, props):
 
 def create_leaf(spec, parent, context):
     props = spec.get("props", {})
-    container = leaf_container(parent) 
+    container = leaf_container(parent)
     hili = leaf_hili(container)
     container.hili_ref = hili
     textbox = leaf_textbox(container, props)
@@ -93,7 +97,7 @@ def select_prev_leaf(context):
     c.focused = p
     print(p)
     return p
-        
+
 def apply_style(context):
     c = context
     for leaf in c.leaves:
@@ -101,7 +105,7 @@ def apply_style(context):
             leaf.set_style(focused)
         else:
             leaf.set_style(default)
-        
+
 def enter_focused_leaf(context):
     c = context
     for leaf in c.leaves:
@@ -123,7 +127,23 @@ def exit_focused_leaf(context):
             leaf.hili_ref.config(bg='blue')
         else:
             leaf.hili_ref.config(bg='gray')
-    
+
+def capture_widget_tree(parent):
+    widget_info = {"type": str(parent)}
+    parts_info = []
+    for child in parent.winfo_parts():
+        parts_info.append(capture_widget_tree(child))
+    if parts_info:
+        widget_info["parts"] = parts_info
+
+    # Extract specific attributes based on widget type
+    # if isinstance(parent, Text):
+    #     widget_info["text"] = parent.get("1.0", END)
+    # elif isinstance(parent, Label) or isinstance(parent, Button):
+    #     widget_info["text"] = parent.cget("text")
+
+    return widget_info
+
 def create_app(spec, context):
     app = Tk()
     props = spec.get('props', {})
@@ -132,7 +152,7 @@ def create_app(spec, context):
     app.geometry("400x800")
     app.grid_columnconfigure(0, weight=1) # Make the first column expandable
     app.grid_rowconfigure(0, weight=1)    # Make the first row expandable
-    
+
 
     def on_key(e):
         if context.mode == Mode.Normal:
@@ -145,6 +165,11 @@ def create_app(spec, context):
             elif e.char == 'i':
                 context.mode = Mode.Insert
                 enter_focused_leaf(context)
+            elif e.keysym == 'Return':
+                widget_tree_data = capture_widget_tree(app)
+                print("Captured Widget Tree:")
+                import pprint
+                pprint.pprint(widget_tree_data)
         elif context.mode == Mode.Insert:
             if e.keysym == 'Escape':
                 context.mode = Mode.Normal
@@ -153,7 +178,7 @@ def create_app(spec, context):
 
     app.bind("<Key>", on_key)
 
-    for i, child in enumerate(spec.get("children", [])):
+    for i, child in enumerate(spec.get("parts", [])):
         component = create_component(child, app, context)
         if component:
             component.grid(row=i, column=0, sticky="nsew")
@@ -183,14 +208,14 @@ def viewport_canvas(container):
     # The scrollbar's movement dictates the canvas's view
     c.config(yscrollcommand=sb.set)
     return c
-    
+
 def inner_frame(view):
     f = Frame(view)
     f.grid_columnconfigure(0, weight=1)
     return f
-    
+
 def populate_frame(content, spec):
-    for i, child in enumerate(spec.get("children", [])):
+    for i, child in enumerate(spec.get("parts", [])):
         component = create_component(child, content, context)
         if component:
             component.grid(row=i, column=0, sticky="ew")
@@ -210,7 +235,7 @@ def create_scrollable(spec, parent, context):
         "<Configure>",
         lambda e: view.config(scrollregion=view.bbox("all"))
     )
-    
+
     populate_frame(content, spec)
 
     return container
@@ -237,21 +262,75 @@ def create_component(spec, parent, context):
         return None
 
 
-if __name__ == '__main__':
-    source = dedent('''
-    App {
+# only the App gets created, everything before just mapped
+source = dedent('''
+    Tkml {
+        meta: 'failure is inevitable'
+
         Scrollable {
-            Leaf { id: l1 text: "Leaf One" }
-            Leaf { id: l2 text: "Leaf Two" }
-            Leaf { id: l3 text: "Leaf Three" }
+            Frame {
+                row_weight: 0: 1
+                col_weight: 0: 1 
+                
+                Canvas {
+                    id: viewport
+                    row: 0
+                    col: 0
+                    sticky: 'nesw'
+                    scrolled_by: scrollbar
+
+                    Frame {
+                        id: content
+                        col_weight: 0: 1
+                    }
+                }
+
+                Scrollbar {
+                    id: scrollbar
+                    orient: 'vertical'
+                    sticky: 'ns'
+                    scrolls: viewport
+                }
+            }
+
         }
+
+        App {
+            script: 'leafapp.py'
+            style: 'leafapp.toml'
+            comps: 'leafcomps.tkml'
+            Scrollable {
+                Leaf { id: l1 text: "Leaf One" }
+                Leaf { id: l2 text: "Leaf Two" }
+                Leaf { id: l3 text: "Leaf Three" }
+            }
+        }
+        
     }
-    ''')
+''')
+
+if __name__ == '__main__':
     tree = tkml_tree(source)
     f = TKMLFilter()
     spec = simplify(tree, f)
     context = Context()
     app = create_component(spec, None, context)
-    app.mainloop()
+    # app.mainloop()
 
+    def viz_spec(spec, indent=0):
+        type_info = spec.get('type', '')
+        props = spec.get('props', {})
+        parts = spec.get('parts', {})
+        
+        if type_info:
+            print(' ' * indent, type_info)
+        for k, v in props.items():
+            if isinstance(v, dict):
+                viz_spec(spec['props'][k])
+            else:
+                print(' ' * (indent + 2), k, v)
+        for part in parts:
+            viz_spec(part, indent + 2)
 
+    viz_spec(spec)
+    

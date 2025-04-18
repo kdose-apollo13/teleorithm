@@ -59,7 +59,7 @@ class test_TKML_grammar_tree_when_combed_with_TKMLFilter(Spec):
             {
                 'type': 'Name',
                 'props': {},
-                'children': []
+                'parts': []
             }
         )
 
@@ -68,10 +68,32 @@ class test_TKML_example_grammar_tree_combed_with_TKMLFilter(Spec):
         self.s = dedent('''
         Block {
             prop_1: "some string"
-            prop_2: #AA2233
-            Inner {
-                prop_3: 31
+        }
+        ''')
+        self.node_filter = TKMLFilter()
+
+    def test_returns_expected_component_dict(self):
+        tree = tkml_tree(self.s)
+        comps = comb_for_components(tree, self.node_filter)
+        self.equa(
+            comps,
+            {
+                'type': 'Block',
+                'props': {'prop_1': 'some string'},
+                'parts': []
             }
+        )
+
+class test_TKML_example_grammar_tree_combed_with_TKMLFilter(Spec):
+    def setUp(self):
+        self.s = dedent('''
+        Block {
+            int: 23
+            float: 5.29
+            string: "aim for the moon"
+            string2: 'wind up among stars'
+            multi: id: 2001
+            color: #123ABC
         }
         ''')
         self.node_filter = TKMLFilter()
@@ -84,16 +106,14 @@ class test_TKML_example_grammar_tree_combed_with_TKMLFilter(Spec):
             {
                 'type': 'Block',
                 'props': {
-                    'prop_1': 'some string',
-                    'prop_2': '#AA2233'
+                    'int': 23,
+                    'float': 5.29,
+                    'string': 'aim for the moon',
+                    'string2': 'wind up among stars',
+                    'multi': {'id': 2001},
+                    'color': '#123ABC'
                 },
-                'children': [
-                    {
-                        'type': 'Inner',
-                        'props': { 'prop_3': 31 },
-                        'children': []
-                    }
-                ]
+                'parts': []
             }
         )
 

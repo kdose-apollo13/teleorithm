@@ -37,14 +37,13 @@ class test_valid_strings_as_properties(Spec):
             tree = parse(s, self.grammar)
             for n in node_iter(tree):
                 if n.expr_name == 'string':
-                    t = n.text
-                    self.asrt(t in s)
+                    self.asrt(n.text in s)
 
-    def test_parsed_tree_has_22_nodes(self):
+    def test_parsed_tree_has_23_nodes(self):
         for s in self.sources:
             tree = parse(s, self.grammar)
             node_qty = count_nodes(tree)
-            self.equa(node_qty, 22)
+            self.equa(node_qty, 23)
 
 if __name__ == '__main__':
     main(testRunner=Runner)

@@ -1,8 +1,14 @@
 """
     | teleorithm |
 
-    TODO: number include float in grammar
+    in grammar, ( x / y ) induces a list
+    that is why [0] in some visit methods
+
+    remember a property is matched by identifer: thing
+    not by number -> so 0: 1 in tkml becomes '0': 1
 """
+from textwrap import dedent
+
 from parsimonious.nodes import NodeVisitor
 
 from tkml.grammar import tkml_tree
@@ -16,30 +22,31 @@ class TKMLFilter(NodeVisitor):
         name = visited[0]
         items = visited[4]  # item*
         props = {}
-        children = []
-        # TODO: clean this up
-        for item_list in items:
-            if item_list:
-                item = item_list[0]
-                if isinstance(item, dict):
-                    if "type" in item:
-                        children.append(item)
-                    else:
-                        props.update(item)
-        component = {'type': name, 'props': props, 'children': children}
+        parts = []
+        for item in items:
+            if isinstance(item, dict):
+                if "type" in item:
+                    parts.append(item)
+                else:
+                    props.update(item)
+        component = {'type': name, 'props': props, 'parts': parts}
         return component
 
     def visit_item(self, node, visited):
-        return visited[0]
+        return visited[0][0]
 
     def visit_property(self, node, visited):
-        return {visited[0]: visited[4]}
+        return {visited[0]: visited[4][0]}
 
     def visit_value(self, node, visited):
         return visited[0]
 
     def visit_string(self, node, visited):
-        return node.text.strip('"')
+        t = node.text
+        if t.startswith('"'):
+            return t.strip('"')
+        else:
+            return t.strip("'")
 
     def visit_identifier(self, node, visited):
         return node.text
@@ -48,7 +55,11 @@ class TKMLFilter(NodeVisitor):
         return node.text
 
     def visit_number(self, node, visited):
-        return int(node.text)
+        t = node.text
+        if '.' in t:
+            return float(t)
+        else:
+            return int(t)
 
     def generic_visit(self, node, visited):
         return visited or node.text
@@ -73,11 +84,21 @@ def comb_for_components(grammar_tree, node_filter):
         return comp_tree
 
 if __name__ == '__main__':
-    t = tkml_tree('Name {}')
+
+    s = dedent('''
+    Tkml {
+        multiprop: 0: 1
+    }
+    ''')
+
+    t = tkml_tree(s)
     comps = comb_for_components(t, TKMLFilter())
+
     assert comps == {
-        'type': 'Name',
-        'props': {},
-        'children': []
+        'type': 'Tkml',
+        'props': {
+            'multiprop': {'0': 1}
+        },
+        'parts': []
     }
 

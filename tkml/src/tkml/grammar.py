@@ -8,17 +8,17 @@ from parsimonious.grammar import Grammar
 from parsimonious.exceptions import ParseError
 
 
-# TODO: what is equivalent without nested r-strings? even though they're incredible
+# order matters -> (x / y / z) will disambiguate if multiply matched
 TKML_GRAMMAR = r'''
 tkml        = ws block ws
 block       = identifier ws "{" ws item* ws "}"
 item        = (property / block) ws
-property    = identifier ws ":" ws value
-value       = string / identifier / color / number
+property    = identifier ws ":" ws (property / value)
+value       = number / color / identifier / string
 string      = ~r'"([^\n"\\]|(\\[^\\]))*"' / ~r"'([^\n'\\]|(\\[^\\]))*'"
-identifier  = ~"[a-zA-Z_][a-zA-Z0-9_]*"
+identifier  = ~r"[a-zA-Z0-9_]+(\.[a-zA-Z0-9_]+)*" 
 color       = "#" ~"[a-zA-Z0-9]{6}"
-number      = ~"[0-9]+"
+number      = ~r"[0-9]+(\.[0-9]+)*"
 ws          = ~"\\s*"
 '''
 
@@ -26,7 +26,9 @@ EXAMPLE_SOURCE = '''
 Block {
     a_string: "a string value"
     a_number: 31
+    a_float: 23.529
     Nested { v: #123ABC }
+    nested: v: #123456
 }
 '''
 

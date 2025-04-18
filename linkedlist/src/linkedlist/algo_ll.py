@@ -1,14 +1,26 @@
 """
+    | teleorithm |
 
-Kramerica Linked List -> kll v0.1
+    -> avoids overhead of python class mechanics
+    -> divides concept of node over list indices
+    
+    faster than naive class implementation
+    much slower than deque-based
 
-source:
-'Introduction to Algorithms - 2nd Edition' p204-212
--Cormen, Leiserson, Rivest, Stein
+    local references to the list (eg) next = ll['next']
+    are more legible for logic - and faster ->
+    ~ 16 % less time, TODO: check bytecode for clues
+    
+    from this tome ->
+    ---------------------------------------------------
+    'Introduction to Algorithms - 2nd Edition' p204-212
+    -Cormen, Leiserson, Rivest, Stein
+    ---------------------------------------------------
 
+    TODO: circular, docs, subtleties
 """
 
-def new_kll(size):
+def new_ll(size):
     new = {
         'nexx': None,
         'prev': None,
@@ -30,23 +42,23 @@ def _free_index(ll):
     free = ll['free']
 
     try:
-        x = free.pop()
+        x = ll['free'].pop()
     except IndexError:
         raise Exception('List Full!')
     else:
         return x
 
 
-def insert(o, kll):
+def insert(o, ll):
     """
         Insert object at start of list.
     """
-    prev = kll['prev']
-    nexx = kll['nexx']
-    keys = kll['keys']
+    prev = ll['prev']
+    nexx = ll['nexx']
+    keys = ll['keys']
     nil = 0
 
-    x = _free_index(kll)
+    x = _free_index(ll)
     
     # nil <-----> H
     # nil <- X -> H
@@ -60,16 +72,16 @@ def insert(o, kll):
     keys[x] = o
 
 
-def append(o, kll):
+def append(o, ll):
     """
         Append object to end of list.
     """
-    prev = kll['prev']
-    nexx = kll['nexx']
-    keys = kll['keys']
+    prev = ll['prev']
+    nexx = ll['nexx']
+    keys = ll['keys']
     nil = 0
 
-    x = _free_index(kll)
+    x = _free_index(ll)
 
     # T <-----> nil
     # T <- X -> nil
@@ -83,14 +95,14 @@ def append(o, kll):
     keys[x] = o
 
 
-def delete(x, kll):
+def _delete(x, ll):
     """
         Delete index x from list.
     """
-    prev = kll['prev']
-    nexx = kll['nexx']
-    keys = kll['keys']
-    free = kll['free']
+    prev = ll['prev']
+    nexx = ll['nexx']
+    keys = ll['keys']
+    free = ll['free']
 
     # P <-> X <-> N
     # P --------> N
@@ -103,46 +115,47 @@ def delete(x, kll):
     free.append(x)
     
 
-def iterate_x(ll):
-    nexx = ll['nexx']
-    nil = 0
+def delete_key(key, ll):
+    """
+        Delete key from list.
+    """
+    target_x = search(key, ll)
+    if target_x:
+        _delete(target_x, ll)
 
-    x = nexx[nil]
+
+def _iterate_x(ll):
+    nil = 0
+    x = ll['nexx'][nil]
     while x != nil:
         yield x
-        x = nexx[x]
+        x = ll['nexx'][x]
 
 
 def iterate_keys(ll):
-    keys = ll['keys']
-
-    for x in iterate_x(ll):
-        yield keys[x]
+    for x in _iterate_x(ll):
+        yield ll['keys'][x]
 
 
-def reverse_x(ll):
-    prev = ll['prev']
+def _reverse_x(ll):
     nil = 0
-
-    x = prev[nil]
+    x = ll['prev'][nil]
     while x != nil:
         yield x
-        x = prev[x]
+        x = ll['prev'][x]
 
 
 def reverse_keys(ll):
-    keys = ll['keys']
-
     for x in reverse_x(ll):
-        yield keys[x]
+        yield ll['keys'][x]
 
 
 def search(target_key, ll):
-    keys = ll['keys']
-
-    for x in iterate_x(ll):
-        if keys[x] == target_key:
+    for x in _iterate_x(ll):
+        if ll['keys'][x] == target_key:
             return x
+    else:
+        return None
 
         
 def sort(ll, **kwargs):
@@ -160,66 +173,31 @@ def sort(ll, **kwargs):
 
 
 def pop_left(ll):
-    nexx = ll['nexx']
-    keys = ll['keys']
     nil = 0
-
-    x = nexx[nil]
-    o = keys[x]
-    delete(x, ll)
+    x = ll['nexx'][nil]
+    o = ll['keys'][x]
+    _delete(x, ll)
     return o
 
 
 def pop(ll):
-    prev = ll['prev']
-    keys = ll['keys']
     nil = 0
-
-    x = prev[nil]
-    o = keys[x]
-    delete(x, ll)
+    x = ll['prev'][nil]
+    o = ll['keys'][x]
+    _delete(x, ll)
     return o
-
-
-def nexx(from_key, ll):
-    keys = ll['keys']
-
-    for x in iterate_x(ll):
-        if keys[x] == from_key:
-            x = ll['nexx'][x]
-            return keys[x]
-
-def prev(from_key, ll):
-    keys = ll['keys']
-
-    for x in iterate_x(ll):
-        if keys[x] == from_key:
-            x = ll['prev'][x]
-            return keys[x]
-
-def first(ll):
-    keys = ll['keys']
-    it = iterate_x(ll)
-    x = next(it)
-    return keys[x]
-
-def last(ll):
-    keys = ll['keys']
-    it = iterate_x(ll)
-    x = next(reversed(list(it)))
-    return keys[x]
-    
 
 if __name__ == '__main__':
     from pprint import pprint
-    ll = new_kll(3)
-    insert('one', ll)
-    append('two', ll)
+
+    ll = new_ll(10)
+    for letter in 'abcdefghij':
+        append(letter, ll)
+
+    print(*_iterate_x(ll))
+
     pprint(ll)
-    n = nexx('one', ll)
-    n = prev('two', ll)
-    # print(first(ll))
-    # print(last(ll))
-
-
+    delete_key('c', ll)
+    delete_key('g', ll)
+    pprint(ll)
 

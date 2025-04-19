@@ -1,0 +1,21 @@
+[Scrollable.Default]
+# id: container
+Frame.config = { bd = 2, relief = 'solid' }
+Frame.grid = { row = 0, column = 0, sticky = 'nsew' }
+Frame.rowweight = { row = 0, weight = 1 }
+Frame.colweight = { col = 0, weight = 1 }
+
+# id: viewport
+Frame.Canvas.config = { yscrollcommand = 'scrollbar.set' }
+Frame.Canvas.grid = { row = 0, column = 0, sticky = 'nsew' }
+
+# id: scrollbar
+Frame.Scrollbar.config = { orient = 'vertical', command = 'viewport.yview'}
+Frame.Scrollbar.grid = { row = 0, column = 1, sticky = 'ns' }
+
+# id: content
+Frame.Canvas.Frame.config = { }
+Frame.Canvas.Frame.colweight = { col = 0, weight = 1 }
+
+
+

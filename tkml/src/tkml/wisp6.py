@@ -14,6 +14,9 @@ from tkml.component import comb_for_components as simplify, TKMLFilter
 # but already importing from them - *time pincer*
 from test_wisp5 import first, last, nexx, prev
 
+# TDD the opposite way -> forwards, from the test to the usage
+from test_leafstyle import style_file_to_dict as loadstyle
+
 # style from toml
 style = {
     'leaf': {
@@ -264,11 +267,13 @@ def viz_spec(spec, indent=0):
 source = dedent('''
     Tkml {
         script: 'leafapp.py'
-        style: 'leafapp.toml'
+        style: 'leafstyle.toml'
         comps: 'leafcomps.tkml'
+
 
         Scrollable {
             Frame {
+                id: container
                 row_weight: 0: 1
                 col_weight: 0: 1 
                 
@@ -292,17 +297,20 @@ source = dedent('''
                     scrolls: viewport
                 }
             }
-
         }
+
 
         App {
             title: 'Failure Is Inevitable'
+            geometry: '400x900'
             Scrollable {
                 Leaf { id: l1 text: "Leaf One" }
                 Leaf { id: l2 text: "Leaf Two" }
                 Leaf { id: l3 text: "Leaf Three" }
             }
         }
+
+
     }
 ''')
 
@@ -332,47 +340,54 @@ def create_widget(tk_class, spec, base):
 
 def create_component(spec, base):
     t = spec['type']
-    if t in mapping:
-        return mapping[t](spec, base)
+
+    if spec['type'] not in mapping:
+        for part in spec['parts']:
+            return create_component(part, base)
     else:
-        for p in spec['parts']:
-            return create_component(p, base)
+        # at some point the recursion must rebound off the tk classes
+        return mapping[spec['type']](spec, base)
+
 
 def create_app(spec, base):
     root = Tk()
     props = spec.get('props', {})
     t = props.get('title', 'default')
+    g = props.get('geometry', '400x100')
     root.title(t)
-    root.geometry("400x800")
-    root.mainloop()
+    root.geometry(g)
+    return root
 
 def create_tkml(spec):
     # load files
     # create components
     # run app
-    ...
     props = spec.get('props', {})
     script_file = props.get('script', '')
     style_file = props.get('style', '')
     comps_file = props.get('comps', '')
+
+    style = loadstyle(style_file)
+    print(style)
     
     parts = spec.get('parts', [])
 
     def centrifuge(tkml_parts):
-        buffer = []
-        for spec in tkml_parts:
-            if spec['type'] == 'App':
-                yield spec
-            else:
-                buffer.append(spec)
-        yield from buffer
+        yield from (s for s in tkml_parts if s['type'] == 'App')
+        yield from (s for s in tkml_parts if s['type'] != 'App')
             
-    app, *comps = centrifuge(parts)
     # ensure parses comps first
     # create_component will try first part (ie) parts[0]
+    app, *comps = centrifuge(parts)
     spec['parts'] = [*comps, app]
-    tkml_runtime = create_component(app, None)
+
+    # what i want runtime to do is keep track of widgets alive
+    # and how they map to stuff like styles
+
+    root_widget = create_component(app, None)
+    root_widget.mainloop()
     
+
 
 mapping = {
     'Frame': partial(create_widget, Frame),
@@ -391,7 +406,5 @@ if __name__ == '__main__':
     # print(widget_tree)
 
     # context = Context()
-    # app = create_component(spec, None, context)
-    # app.mainloop()
 
     

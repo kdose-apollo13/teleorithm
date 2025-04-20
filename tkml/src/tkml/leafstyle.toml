@@ -1,9 +1,14 @@
-[Scrollable.Default]
+[Tk]
+title = 'Failure is Inevitable'
+geometry = '400x900'
+
+
+[Scrollable]
 # id: container
 Frame.config = { bd = 2, relief = 'solid' }
 Frame.grid = { row = 0, column = 0, sticky = 'nsew' }
-Frame.rowweight = { row = 0, weight = 1 }
-Frame.colweight = { col = 0, weight = 1 }
+Frame.grid_rowconfigure = { row = 0, weight = 1 }
+Frame.grid_columnconfigure = { col = 0, weight = 1 }
 
 # id: viewport
 Frame.Canvas.config = { yscrollcommand = 'scrollbar.set' }
@@ -15,7 +20,7 @@ Frame.Scrollbar.grid = { row = 0, column = 1, sticky = 'ns' }
 
 # id: content
 Frame.Canvas.Frame.config = { }
-Frame.Canvas.Frame.colweight = { col = 0, weight = 1 }
+Frame.Canvas.Frame.grid_columnconfigure = { col = 0, weight = 1 }
 
 
 

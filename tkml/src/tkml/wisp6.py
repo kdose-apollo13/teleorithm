@@ -4,6 +4,7 @@
 from enum import Enum
 from functools import partial
 from itertools import pairwise
+from operator import methodcaller
 from tkinter import *
 from textwrap import dedent
 
@@ -17,23 +18,8 @@ from test_wisp5 import first, last, nexx, prev
 # TDD the opposite way -> forwards, from the test to the usage
 from test_leafstyle import style_file_to_dict as loadstyle
 
-# style from toml
-style = {
-    'leaf': {
-        'unselected': {
-            'background': 'gray',
-            'state': DISABLED
-        },
-        'selected': {
-            'background': 'blue',
-            'state': DISABLED
-        },
-        'active': {
-            'background': 'green',
-            'state': NORMAL
-        }
-    }
-}
+import tkinter as tk
+
 
 class Mode(Enum):
     Normal = 1
@@ -46,35 +32,6 @@ class Context:
         self.leaves = []
         self.focused = None
 
-
-
-# --------------------------------------------------------------------
-
-def leaf_container(parent):
-    f = Frame(parent, bd=1, relief='solid')
-    # text box expands
-    f.grid_columnconfigure(1, weight=1)
-    return f
-
-def leaf_hili(parent):
-    hl = Canvas(parent, width=10, bg='gray', highlightthickness=0)
-    hl.grid(row=0, column=0, sticky='ns')
-    return hl
-
-def leaf_textbox(parent, props):
-    t = Text(parent, height=4, width=90, wrap='word', state=DISABLED)
-    t.insert('1.0', props.get('text', ''))
-    t.grid(row=0, column=1, sticky='ew')
-    return t
-
-def create_leaf(spec, parent, context):
-    props = spec.get("props", {})
-    container = leaf_container(parent)
-    hili = leaf_hili(container)
-    container.hili_ref = hili
-    textbox = leaf_textbox(container, props)
-    container.textbox_ref = textbox
-    return container
 
 # --------------------------------------------------------------------
 
@@ -131,7 +88,7 @@ def exit_focused_leaf(context):
             leaf.hili_ref.config(bg='gray')
 
 
-def create_app(spec, context):
+def create_app2(spec, context):
     app = Tk()
     props = spec.get('props', {})
     t = props.get('title', 'default')
@@ -175,78 +132,9 @@ def create_app(spec, context):
 
     return app
 
-# --------------------------------------------------------------------
-
-def outer_frame(parent):
-    frame = Frame(parent)
-    # The canvas shall expand with the frame
-    frame.grid_columnconfigure(0, weight=1)
-    # Vertically, too, the canvas shall grow
-    frame.grid_rowconfigure(0, weight=1)
-    return frame
-
-def viewport_canvas(container):
-    c = Canvas(container)
-    c.grid(row=0, column=0, sticky="nsew")
-
-    sb = Scrollbar(container, orient="vertical", command=c.yview)
-    sb.grid(row=0, column=1, sticky="ns")
-
-    # The scrollbar's movement dictates the canvas's view
-    c.config(yscrollcommand=sb.set)
-    return c
-
-def inner_frame(view):
-    f = Frame(view)
-    f.grid_columnconfigure(0, weight=1)
-    return f
-
-def populate_frame(content, spec):
-    for i, child in enumerate(spec.get("parts", [])):
-        component = create_component(child, content, context)
-        if component:
-            component.grid(row=i, column=0, sticky="ew")
-
-def create_scrollable(spec, parent, context):
-    print(f"Creating Scrollable component, parent: {parent}")
-
-    container = outer_frame(parent)
-    container.grid(row=0, column=0, sticky="nsew")
-
-    view = viewport_canvas(container)
-    content = inner_frame(view)
-    view.create_window((0, 0), window=content, anchor="nw")
-
-    # When the inner frame shifts, the canvas learns its boundaries
-    content.bind(
-        "<Configure>",
-        lambda e: view.config(scrollregion=view.bbox("all"))
-    )
-
-    populate_frame(content, spec)
-
-    return container
 
 # --------------------------------------------------------------------
 
-# TODO: need something that works with initial and final dicts
-# initial dict should permit empty
-# final dict is based either on tkml or from widgets - both directions
-
-def create_component(spec, parent, context):
-    """
-        build active widget tree representation here?
-    """
-    if spec['type'] == 'App':
-        return create_app(spec, context)
-    elif spec['type'] == 'Scrollable':
-        return create_scrollable(spec, parent, context)
-    elif spec['type'] == 'Leaf':
-        leaf = create_leaf(spec, parent, context)
-        context.leaves.append(leaf)
-        return leaf
-    else:
-        return None
 
 def viz_spec(spec, indent=0):
     type_info = spec.get('type', '')
@@ -270,46 +158,31 @@ source = dedent('''
         style: 'leafstyle.toml'
         comps: 'leafcomps.tkml'
 
-
         Scrollable {
             Frame {
                 id: container
-                row_weight: 0: 1
-                col_weight: 0: 1 
                 
                 Canvas {
                     id: viewport
-                    row: 0
-                    col: 0
-                    sticky: 'nesw'
-                    scrolled_by: scrollbar
 
                     Frame {
                         id: content
-                        col_weight: 0: 1
                     }
                 }
 
                 Scrollbar {
                     id: scrollbar
-                    orient: 'vertical'
-                    sticky: 'ns'
-                    scrolls: viewport
                 }
             }
         }
 
-
-        App {
-            title: 'Failure Is Inevitable'
-            geometry: '400x900'
+        Tk {
             Scrollable {
                 Leaf { id: l1 text: "Leaf One" }
                 Leaf { id: l2 text: "Leaf Two" }
                 Leaf { id: l3 text: "Leaf Three" }
             }
         }
-
 
     }
 ''')
@@ -323,40 +196,34 @@ def capture_widget_tree(parent):
         widget_info["parts"] = parts_info
 
     # Extract specific attributes based on widget type
-    # if isinstance(parent, Text):
-    #     widget_info["text"] = parent.get("1.0", END)
+    # if isinstance(parent, Text): widget_info["text"] = parent.get("1.0", END)
     # elif isinstance(parent, Label) or isinstance(parent, Button):
     #     widget_info["text"] = parent.cget("text")
 
     return widget_info
 
 
-def create_widget(tk_class, spec, base):
-    w = tk_class(base)
-    for subspec in spec['parts']:
-        create_component(subspec, w)
-    return w
-
-
-def create_component(spec, base):
+def create_widget(spec, base, style, comps):
     t = spec['type']
 
-    if spec['type'] not in mapping:
-        for part in spec['parts']:
-            return create_component(part, base)
+    if t in comps:
+        for pspec in comps[t]['parts']:
+            s = style[t]
+            w = create_widget(pspec, base, s, comps)
+            return w
     else:
-        # at some point the recursion must rebound off the tk classes
-        return mapping[spec['type']](spec, base)
+        tk_class = getattr(tk, t, None)
+        widget = tk_class(base)
+        # print(style[t])
+        for name, value in spec['props'].items():
+            if name == 'id': continue
+            print(name, value)
+            methodcaller(name, value)(widget)
+        for part in spec['parts']:
+            subwidget = create_widget(part, widget, style, comps)
+        return widget
+        
 
-
-def create_app(spec, base):
-    root = Tk()
-    props = spec.get('props', {})
-    t = props.get('title', 'default')
-    g = props.get('geometry', '400x100')
-    root.title(t)
-    root.geometry(g)
-    return root
 
 def create_tkml(spec):
     # load files
@@ -368,33 +235,28 @@ def create_tkml(spec):
     comps_file = props.get('comps', '')
 
     style = loadstyle(style_file)
-    print(style)
-    
     parts = spec.get('parts', [])
 
     def centrifuge(tkml_parts):
-        yield from (s for s in tkml_parts if s['type'] == 'App')
-        yield from (s for s in tkml_parts if s['type'] != 'App')
+        yield from (s for s in tkml_parts if s['type'] == 'Tk')
+        yield from (s for s in tkml_parts if s['type'] != 'Tk')
             
-    # ensure parses comps first
-    # create_component will try first part (ie) parts[0]
     app, *comps = centrifuge(parts)
-    spec['parts'] = [*comps, app]
-
-    # what i want runtime to do is keep track of widgets alive
-    # and how they map to stuff like styles
-
-    root_widget = create_component(app, None)
-    root_widget.mainloop()
+    compdict = {c['type']: c for c in comps}
+    # print(compdict)
     
+    # associate widget, state, style
+
+    root = create_widget(app, None, style, compdict)
+    # root.mainloop()
+
+    # wtree = capture_widget_tree(root)
+    # print(wtree)
+
+    # root_widget.bind('<Key>', lambda e: print(capture_widget_tree(root_widget)))
+    # now associate it with styles depending on state
 
 
-mapping = {
-    'Frame': partial(create_widget, Frame),
-    'Canvas': partial(create_widget, Canvas),
-    'Scrollbar': partial(create_widget, Scrollbar),
-    'App': create_app,
-}
 
 if __name__ == '__main__':
     tree = tkml_tree(source)
@@ -402,7 +264,8 @@ if __name__ == '__main__':
     spec = simplify(tree, f)
     # viz_spec(spec)
     create_tkml(spec)
-    # widget_tree = capture_widget_tree(app)
+    # print(widget_tree)
+    # widget_tree = capture_widget_tree(root_widget)
     # print(widget_tree)
 
     # context = Context()

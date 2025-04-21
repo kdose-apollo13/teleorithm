@@ -1,0 +1,19 @@
+[Frame]
+grid = { row = 0, column = 0, sticky = 'nsew' }
+grid_rowconfigure = { row = 0, weight = 1 }
+grid_columnconfigure = { col = 0, weight = 1 }
+
+[Frame.config]
+bd = 2
+relief = 'solid'
+background= '#DD3344'
+width = 300
+height = 200
+
+
+[Scrollable]
+grid_rowconfigure = { row = 0, weight = 1 }
+grid_columnconfigure = { col = 0, weight = 1 }
+
+
+

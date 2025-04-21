@@ -161,18 +161,13 @@ source = dedent('''
         Scrollable {
             Frame {
                 id: container
-                
+
                 Canvas {
                     id: viewport
-
-                    Frame {
-                        id: content
-                    }
+                    Frame { id: content }
                 }
 
-                Scrollbar {
-                    id: scrollbar
-                }
+                Scrollbar { id: scrollbar }
             }
         }
 
@@ -269,5 +264,7 @@ if __name__ == '__main__':
     # print(widget_tree)
 
     # context = Context()
+
+    # F(Frame, style) -> widget
 
     

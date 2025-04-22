@@ -35,7 +35,7 @@ class Test_Scrollable_when(Spec):
             Scrollable { }
         ''')
         tree = tkml_tree(source)
-        self.specs = comb_for_components(tree, TKMLFilter())
+        self.spec = comb_for_components(tree, TKMLFilter())
         self.style = loads_toml(dedent('''
             [Scrollable]
         '''))
@@ -43,7 +43,7 @@ class Test_Scrollable_when(Spec):
     # // OBSERVE //
     def test_returns_something(self):
         self.equa(
-            self.specs,
+            self.spec,
             {'type': 'Scrollable', 'props': {}, 'parts': []}
         )
 
@@ -53,6 +53,15 @@ class Test_Scrollable_when(Spec):
         )
         # WHAT NOW?
         # JUST MAKE SOME FUNCTION THAT DOES SOMETHING WITH THESE THINGS
+        def f(spec):
+            # extract 'type': t and 'props': d from spec
+            x = {spec['type']: spec['props']}
+            return x
+
+        self.equa(
+            f(self.spec),
+            {'Scrollable': {}}
+        )
 
     # // OBSERVE //
 

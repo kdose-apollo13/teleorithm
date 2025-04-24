@@ -1,9 +1,21 @@
 """
-    +-----+
-    !kDoSE¡
-    +-----+
-    THEORY OF TESTING
-    -----------------
+    | teleorithm |
+
+    !restructure tests around state¡
+    use full setUp tearDown symmetry
+    test methods become shared pivots
+    around whatever you care to track
+    
+    ~~ everything must have a name ~~
+    that thing you get back from a function?
+    name it -> everything must have a name
+    name = classify = type = consider
+
+    at the very least it is [something]_object
+    EVERYTHING in python is at least an object
+    if you can't name the object you're wielding,
+    then the object is wielding you
+
     -limit the unconfidence horizon
     -verify robust first principles
     -specify, formalize, ontologize

@@ -20,12 +20,25 @@ class test_equivalent_computations(Spec):
         self.x = 2
 
     def test_computation(self):
-        # changes interesting state somehow
-        self.x += 1
+        def c(cls):
+            cls.x += 1
+        # even c is an object -> a __getattribute__ incrementer object
+        # it returns None
+        # when called, an attribute incrementer takes an object
+        # and an attribute and tries to increment it by integer 1
+        def attribute_incrementer(o, a):
+            try:
+                x = getattr(o, a)
+            except:
+                raise Exception('could not increment attribute')
+            else:
+                setattr(o, a, x + 1)
+
+        # c(self)
+        attribute_incrementer(self, 'x')
     
     def tearDown(self):
-        self.equa(self.x, 2)
-
+        self.equa(self.x, 3)
 
 
 

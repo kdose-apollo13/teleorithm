@@ -49,10 +49,42 @@ def count_nodes_another_way(tree):
     return len(tree_text.splitlines())
 
 
+def key_and_value_from(d):
+    """
+        d
+            : dict
+            : {'Scrollable': {prop: val, ...}}
+
+        returns
+            -> tuple[str, dict]
+            -> 'Scrollable', {prop: val, ...}
+            -> name of component mapped to its props
+    """
+    name, props = list(d.items())[0]
+    return name, props
+
+
+def load_toml_string(string):
+    d = tomllib.loads(string)
+    return d
+
+
+def load_toml_file(path):
+    with open(path, 'rb') as r:
+        d = tomllib.load(r)
+    return d
+
+
 if __name__ == '__main__':
+    
     from tkml.grammar import tkml_tree
     source = 'A { b: c }'
     tree = tkml_tree(source)
-    assert count_nodes(tree) == 21
-    assert count_nodes_another_way(tree) == 21
+    assert count_nodes(tree) == 22
+    assert count_nodes_another_way(tree) == 22
+
+    d = {'name': {'key': 'val'}}
+    k, v = key_and_value_from(d)
+    assert k == 'name'
+    assert v == {'key': 'val'}
     

@@ -4,147 +4,292 @@
 from unittest import main, TestCase
 from klab.ututils import Spec, Runner
 
-from parsimonious.nodes import Node
-from parsimonious.grammar import Grammar
-
 from textwrap import dedent
-
-from tkml.grammar import tkml_tree
-from tkml.component import comb_for_components, TKMLFilter
-from tkml.utils import count_nodes
-
 from tkinter import *
 
+from tkml.component import (
+    comp_tree, comp_name_and_props, prop_tree_from_comp_tree, 
+    style_props_and_script_props, SCRIPT_KEYS
+)
+from tkml.utils import key_and_value_from
 
-class test_curly_braces_within_an_f_string(Spec):
+
+class Test_trivial_tkml_source(Spec):
     def setUp(self):
-        self.thing = 'whatever'
-    
-    def test_are_preserved_by_doubling_the_brace_chars(self):
-        s = f'outer braces {{ all the {self.thing} forever and ever }}'
+        self.source = dedent('''
+            Scrollable { }
+        ''')
+        self.script_keys = ['id', 'bind', 'config']
+
+    def test_to_comptree_returns_dict(self):
+        comptree = comp_tree(self.source)
+
+        self.asrt(isinstance(comptree, dict))
+
         self.equa(
-            s,
-            'outer braces { all the whatever forever and ever }'
+            comptree,
+            {'type': 'Scrollable', 'props': {}, 'parts': []}
         )
 
-class test_single_and_multiline_sources(Spec):
-    def setUp(self):
-        self.single = 'Name {}'
+    def test_comptree_to_nameprops_returns_dict(self):
+        tree = comp_tree(self.source)
+        nameprops = comp_name_and_props(tree)
 
-        self.multi = dedent('''\
-        Name {}''')
+        self.asrt(isinstance(nameprops, dict))
 
-    def test_represent_same_value(self):
-        self.equa(self.single, self.multi)
-
-    def test_have_identical_trees(self):
-        tree_single = tkml_tree(self.single)
-        tree_multi = tkml_tree(self.multi)
-        self.equa(tree_single, tree_multi)
+        self.equa(
+            nameprops,
+            {'Scrollable': {}}
+        )
         
+    def test_nameprops_to_key_and_value_returns_tuple(self):
+        tree = comp_tree(self.source)
+        nameprops = comp_name_and_props(tree)
+        t = key_and_value_from(nameprops)
 
-class test_TKML_grammar_tree_when_combed_with_TKMLFilter(Spec):
-    def setUp(self):
-        self.tree = tkml_tree('Name {}')
-        self.node_filter = TKMLFilter()
+        self.asrt(isinstance(t, tuple))
+
+        name, props = t
+        self.asrt(isinstance(name, str))
+        self.asrt(isinstance(props, dict))
+
+        self.equa(name, 'Scrollable')
+        self.equa(props, {})
     
-    def test_returns_dict(self):
-        d = comb_for_components(self.tree, self.node_filter)
-        self.asrt(isinstance(d, dict))
+    def test_props_to_style_and_script_specific_props(self):
+        tree = comp_tree(self.source)
+        nameprops = comp_name_and_props(tree)
+        name, props = key_and_value_from(nameprops)
+        
+        styl, scrip = style_props_and_script_props(props, self.script_keys)
+        
+        self.equa(styl, {})
+        self.equa(scrip, {})
+   
 
-    def test_interpret_dict_as_components(self):
-        comps = comb_for_components(self.tree, self.node_filter)
-        self.equa(
-            comps,
-            {
-                'type': 'Name',
-                'props': {},
-                'parts': []
-            }
-        )
-
-class test_TKML_example_grammar_tree_combed_with_TKMLFilter(Spec):
+class Test_tkml_source_with_style_and_script_props(Spec):
     def setUp(self):
-        self.s = dedent('''
-        Block {
-            prop_1: "some string"
-        }
-        ''')
-        self.node_filter = TKMLFilter()
-
-    def test_returns_expected_component_dict(self):
-        tree = tkml_tree(self.s)
-        comps = comb_for_components(tree, self.node_filter)
-        self.equa(
-            comps,
-            {
-                'type': 'Block',
-                'props': {'prop_1': 'some string'},
-                'parts': []
+        self.source = dedent('''
+            Scrollable {
+                id: w23
+                config { key: 'value' }
+                bind { event: 'script.callback' }
+                bg: #123123
+                grid { row: 0 column: 0 }
             }
-        )
-
-class test_TKML_example_grammar_tree_combed_with_TKMLFilter(Spec):
-    def setUp(self):
-        self.s = dedent('''
-        Block {
-            int: 23
-            float: 5.29
-            string: "aim for the moon"
-            string2: 'wind up among stars'
-            multi: id: 2001
-            color: #123ABC
-        }
         ''')
-        self.node_filter = TKMLFilter()
+        self.block_prop_names = ['bind', 'config', 'grid']
 
-    def test_returns_expected_component_dict(self):
-        tree = tkml_tree(self.s)
-        comps = comb_for_components(tree, self.node_filter)
+    def test_to_comptree_returns_dict(self):
+        comptree = comp_tree(self.source)
+
+        self.asrt(isinstance(comptree, dict))
+
         self.equa(
-            comps,
+            comptree,
             {
-                'type': 'Block',
+                'type': 'Scrollable',
                 'props': {
-                    'int': 23,
-                    'float': 5.29,
-                    'string': 'aim for the moon',
-                    'string2': 'wind up among stars',
-                    'multi': {'id': 2001},
-                    'color': '#123ABC'
+                    'id': 'w23',
+                    'config': {'key': 'value'},
+                    'bind': {'event': 'script.callback'},
+                    'bg': '#123123',
+                    'grid': {'column': 0, 'row': 0},
                 },
-                'parts': []
+                'parts': [],
+            }
+
+        )
+
+    def test_comptree_to_nameprops_returns_dict(self):
+        comptree = comp_tree(self.source)
+        nameprops = comp_name_and_props(comptree)
+
+        self.asrt(isinstance(nameprops, dict))
+
+        self.equa(
+            nameprops,
+            {
+                'Scrollable': {
+                    'id': 'w23',
+                    'config': {'key': 'value'},
+                    'bind': {'event': 'script.callback'},
+                    'bg': '#123123',
+                    'grid': {'column': 0, 'row': 0},
+                }
             }
         )
 
-class test_TKML_source_to_tk_widget(Spec):
-    def setUp(self):
-        self.s = dedent('''
-        App {
-            title: "Test App"
-            geometry: "800x600+0+0"
-        }
+    def test_separating_style_and_script_props_returns_tuple_of_dict(self):
+        comptree = comp_tree(self.source)
+        nameprops = comp_name_and_props(comptree)
+        name, props = key_and_value_from(nameprops)
+        t = style_props_and_script_props(props, SCRIPT_KEYS)
 
-        ''')
-        self.node_filter = TKMLFilter()
+        self.asrt(isinstance(t, tuple))
         
-    def test_something(self):
-        tree = tkml_tree(self.s)
-        comps = comb_for_components(tree, self.node_filter)
+        style, scrip = t
 
-        def create_Tk(comp, parent):
-            # minimal app -> Tk, title, geometry, grid
-            props = comp['props']
-            root = Tk()
-            root.geometry(props['geometry'])
-            return root
+        self.asrt(isinstance(style, dict))
+        self.asrt(isinstance(scrip, dict))
 
-        r = create_Tk(comps, None)
-        # r.mainloop()
-        self.asrt(True)
+        self.equa(
+            style,
+            {
+                'bg': '#123123',
+                'grid': {'column': 0, 'row': 0},
+            }
+        )
+
+        self.equa(
+            scrip,
+            {
+                'id': 'w23',
+                'config': {'key': 'value'},
+                'bind': {'event': 'script.callback'},
+            }
+        )
+
+    def test_comp_tree_to_prop_tree_returns_dict(self):
+        comptree = comp_tree(self.source)
+        tree = prop_tree_from_comp_tree(comptree)
+
+        self.equa(
+            tree,
+            {
+                'type': 'Scrollable',
+                'script_props': {
+                    'id': 'w23',
+                    'bind': {'event': 'script.callback'},
+                    'config': {'key': 'value'},
+                },
+                'style_props': {
+                    'bg': '#123123',
+                    'grid': {'column': 0, 'row': 0}
+                },
+                'parts': [],
+            }
+        )
+
+
+
+class Test_real_tkml_source_for_Scrollable(Spec):
+    def setUp(self):
+        self.source = dedent('''
+            Scrollable {
+                Frame {
+                    id: container
+
+                    Canvas {
+                        id: viewport
+                        config: yscrollcommand: scrollbar.set
+
+                        Frame { 
+                            id: content 
+                        }
+                    }
+
+                    Scrollbar { 
+                        id: scrollbar
+                        config: command: viewport.yview
+                    }
+                }
+            }
+        ''')
+
+    def test_to_comptree_returns_dict(self):
+        comptree = comp_tree(self.source)
+
+        self.asrt(isinstance(comptree, dict))
+
+        # self.maxDiff = None
+        self.equa(
+            comptree,
+            {
+                'type': 'Scrollable',
+                'props': {},
+                'parts': [
+                    {
+                        'type': 'Frame',
+                        'props': {'id': 'container'},
+                        'parts': [
+                            {
+                                'type': 'Canvas',
+                                'props': {
+                                    'config': {'yscrollcommand': 'scrollbar.set'},
+                                    'id': 'viewport'
+                                },
+                                'parts': [
+                                    {
+                                        'type': 'Frame',
+                                        'props': {'id': 'content'},
+                                        'parts': [],
+                                    }
+                                ],
+                            },
+                            {
+                                'type': 'Scrollbar',
+                                'props': {
+                                    'config': {'command': 'viewport.yview'},
+                                    'id': 'scrollbar'
+                                },
+                                'parts': [],
+                            }
+                        ],
+                    }
+                ],
+            }
+        )
+
+    def test_comp_tree_to_prop_tree_returns_dict(self):
+        comptree = comp_tree(self.source)
+        tree = prop_tree_from_comp_tree(comptree)
+
+        self.equa(
+            tree,
+            {
+                'type': 'Scrollable',
+                'style_props': {},
+                'script_props': {},
+                'parts': [
+                    {
+                        'type': 'Frame',
+                        'style_props': {},
+                        'script_props': {'id': 'container'},
+                        'parts': [
+                            {
+                                'type': 'Canvas',
+                                'style_props': {},
+                                'script_props': {
+                                    'config': {'yscrollcommand': 'scrollbar.set'},
+                                    'id': 'viewport'
+                                },
+                                'parts': [
+                                    {
+                                        'type': 'Frame',
+                                        'style_props': {},
+                                        'script_props': {'id': 'content'},
+                                        'parts': [],
+                                    }
+                                ],
+                            },
+                            {
+                                'type': 'Scrollbar',
+                                'style_props': {},
+                                'script_props': {
+                                    'config': {'command': 'viewport.yview'},
+                                    'id': 'scrollbar'
+                                },
+                                'parts': [],
+                            }
+                        ],
+                    }
+                ],
+            }
+        )
+
 
 
 if __name__ == '__main__':
     main(testRunner=Runner)
-
 

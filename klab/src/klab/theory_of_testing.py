@@ -10,13 +10,12 @@
     -if appropriate -> tell a story
     -use custom test result, runner
     -easy to run - editor and shell
-    -test ways to do things -------
-    -format and process -> '
+
     monkey like complicated?
     NO!
     MONKEY LIKE SIMPLE
     want do EVERY day?
-    make simple'
+    make simple
 
 ONTOLOGY
 -concepts and how they relate to each other
@@ -30,10 +29,15 @@ ONTOLOGY
     // 20 lines -> 36%              //
     // 100 lines -> 0%             //
     // -------------------------- //
-    // hack informally -> learn  //
-    // verify semiformally ALL  //
-    // write code -> test it   //
-    // test until confident   //
-    // doubt tests themselves \\
+    // hack hack hack hack hack h //
+    // informal joy artist lunati //
+    // employ repl, docs, machete //
+    // achieve precise transforms //
+    // with basic data structures //
+    // and then begin engineering //
+    // -------------------------- //
+    // when knowledge is adequate //
+    // functions emerge naturally //
+    // from within tests or specs //
 """
 

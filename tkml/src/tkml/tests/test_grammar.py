@@ -14,6 +14,21 @@ from tkml.grammar import TKML_GRAMMAR, grammify, parse, tkml_tree
 from tkml.utils import count_nodes
 
 
+# all test methods convey setUp state to tearDown state
+class test_equivalent_computations(Spec):
+    def setUp(self):
+        self.x = 2
+
+    def test_computation(self):
+        # changes interesting state somehow
+        self.x += 1
+    
+    def tearDown(self):
+        self.equa(self.x, 2)
+
+
+
+
 class test_TKML_grammar_string_when_grammified(Spec):
     def setUp(self):
         self.s = TKML_GRAMMAR

@@ -7,9 +7,6 @@
     trounces naive class impl
     trounced by deque
 
-    local references to the list (eg) next = ll['next']
-    are more legible for logic - and faster ->
-    ~ 16 % less time, TODO: check bytecode for clues
     TODO: and make it easy to view/compare bytecodes
     
     from this tome ->
@@ -38,8 +35,6 @@ def _init(ll, size):
 
 
 def _free_index(ll):
-    free = ll['free']
-
     try:
         x = ll['free'].pop()
     except IndexError:

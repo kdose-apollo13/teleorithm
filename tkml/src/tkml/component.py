@@ -1,9 +1,6 @@
 """
     | teleorithm |
 
-    in grammar, ( x / y ) induces a list
-    that is why [0] in some visit methods
-
     remember a property is matched by identifer: thing
     not by number -> so 0: 1 in tkml becomes '0': 1
 """

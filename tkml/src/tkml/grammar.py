@@ -1,12 +1,11 @@
 """
     | teleorithm |
-
-    source -> grammar tree -> component tree -> widget tree (app)
-    tkml   -> tkml tree    -> component tree -> widget tree (app)
 """
 from parsimonious.grammar import Grammar
 from parsimonious.exceptions import ParseError
 
+
+# TODO: encompass unicode?
 
 # order matters -> (x / y / z) will disambiguate if multiply matched
 TKML_GRAMMAR = r'''
@@ -24,11 +23,13 @@ ws          = ~"\\s*"
 
 EXAMPLE_SOURCE = '''
 Block {
-    a_string: "a string value"
-    a_number: 31
-    a_float: 23.529
-    Nested { v: #123ABC }
-    nested: v: #123456
+    string: "a string value"
+    number: 31
+    float: 23.529
+    color: #AA1122
+    nested_block { v: #123ABC  q: 1000}
+    nested_prop: v: #123456
+    0: "digit identifier"
 }
 '''
 
@@ -77,11 +78,23 @@ def parse(source, grammar):
 
 
 def tkml_tree(source):
+    """
+        source
+            : str
+
+        returns
+            -> parsimonious.nodes.Node
+    """
     return parse(source, grammify(TKML_GRAMMAR))
 
 
 if __name__ == '__main__':
+    grammar = grammify(TKML_GRAMMAR)
+    n = grammar['number'].parse('23')
+    assert n.full_text == '23'
+
     node = parse(EXAMPLE_SOURCE, grammify(TKML_GRAMMAR))
     tree = tkml_tree(EXAMPLE_SOURCE)
     assert node == tree
+    assert tree.full_text == EXAMPLE_SOURCE
 

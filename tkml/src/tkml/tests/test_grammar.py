@@ -7,6 +7,7 @@ from klab.ututils import Spec, Runner
 from parsimonious.nodes import Node
 from parsimonious.grammar import Grammar
 
+from collections import OrderedDict
 from textwrap import dedent
 
 from tkml.grammar import TKML_GRAMMAR, grammify, parse, tkml_tree
@@ -24,6 +25,8 @@ class test_TKML_grammar_string_when_grammified(Spec):
         # 
         self.asrt(isinstance(g, Grammar))
 
+        # TODO: ok -> tell me some thing interesting about this Grammar
+
 
 class test_empty_grammar_string_when_grammified(Spec):
     def setUp(self):
@@ -32,6 +35,8 @@ class test_empty_grammar_string_when_grammified(Spec):
     def test_returns_Grammar(self):
         g = grammify(self.s)
         self.asrt(isinstance(g, Grammar))
+
+        # TODO: ok now what? what relation does the Grammar bear to anything?
         
 
 class test_trivial_grammar_string_when_grammified(Spec):
@@ -42,8 +47,11 @@ class test_trivial_grammar_string_when_grammified(Spec):
         g = grammify(self.s)
         self.asrt(isinstance(g, Grammar))
 
+    def test_Grammar_is_an_OrderedDict(self):
+        g = grammify(self.s)
+        self.asrt(isinstance(g, OrderedDict))
 
-# TODO: keep going with this, actual unicode
+
 class test_unicode_range_string_when_grammified(Spec):
     def setUp(self):
         self.s = dedent(r'''

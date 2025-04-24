@@ -1,3 +1,9 @@
+"""
+    | teleorithm |
+
+    in grammar, ( x / y ) induces a list
+    that is why [0] in some visit methods
+"""
 from parsimonious.nodes import NodeVisitor
 
 
@@ -72,5 +78,5 @@ def comb_for_components(grammar_tree, node_filter):
 
 
 if __name__ == '__main__':
-    
     pass
+

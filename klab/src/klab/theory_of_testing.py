@@ -25,9 +25,9 @@ ONTOLOGY
     // 95% confidence in a line of code //
     // ----- and its consequences ---- //
     // ----- and its weaknesses ----- //
-    // 10 lines -> 60%               //
-    // 20 lines -> 36%              //
-    // 100 lines -> 0%             //
+    //       10 lines -> 60%         //
+    //       20 lines -> 36%        //
+    //       100 lines -> 0%       //
     // -------------------------- //
     // hack hack hack hack hack h //
     // informal joy artist lunati //

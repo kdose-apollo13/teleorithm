@@ -9,7 +9,7 @@ from tkinter import *
 
 from tkml.component import (
     comp_tree, comp_name_and_props, prop_tree_from_comp_tree, 
-    style_props_and_script_props, SCRIPT_KEYS
+    style_props_and_script_props, SCRIPT_KEYS, MULTIPROP_NAMES
 )
 from tkml.utils import key_and_value_from
 
@@ -19,7 +19,7 @@ class Test_trivial_tkml_source(Spec):
         self.source = dedent('''
             Scrollable { }
         ''')
-        self.script_keys = ['id', 'bind', 'config']
+        self.script_keys = SCRIPT_KEYS
 
     def test_to_comptree_returns_dict(self):
         comptree = comp_tree(self.source)
@@ -32,8 +32,8 @@ class Test_trivial_tkml_source(Spec):
         )
 
     def test_comptree_to_nameprops_returns_dict(self):
-        tree = comp_tree(self.source)
-        nameprops = comp_name_and_props(tree)
+        comptree = comp_tree(self.source)
+        nameprops = comp_name_and_props(comptree)
 
         self.asrt(isinstance(nameprops, dict))
 
@@ -43,10 +43,9 @@ class Test_trivial_tkml_source(Spec):
         )
         
     def test_nameprops_to_key_and_value_returns_tuple(self):
-        tree = comp_tree(self.source)
-        nameprops = comp_name_and_props(tree)
+        comptree = comp_tree(self.source)
+        nameprops = comp_name_and_props(comptree)
         t = key_and_value_from(nameprops)
-
         self.asrt(isinstance(t, tuple))
 
         name, props = t
@@ -57,8 +56,8 @@ class Test_trivial_tkml_source(Spec):
         self.equa(props, {})
     
     def test_props_to_style_and_script_specific_props(self):
-        tree = comp_tree(self.source)
-        nameprops = comp_name_and_props(tree)
+        comptree = comp_tree(self.source)
+        nameprops = comp_name_and_props(comptree)
         name, props = key_and_value_from(nameprops)
         
         styl, scrip = style_props_and_script_props(props, self.script_keys)
@@ -78,7 +77,6 @@ class Test_tkml_source_with_style_and_script_props(Spec):
                 grid { row: 0 column: 0 }
             }
         ''')
-        self.block_prop_names = ['bind', 'config', 'grid']
 
     def test_to_comptree_returns_dict(self):
         comptree = comp_tree(self.source)

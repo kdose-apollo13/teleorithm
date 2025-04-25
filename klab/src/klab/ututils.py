@@ -19,18 +19,19 @@ from unittest import main, TestCase, TextTestRunner, TextTestResult
 
 def extract_names(s):
     """
-    s
-        : str
-        : (eg) <__main__.TestOneTwo testMethod=test_three_four>
-        : (eg) <tests.test_grammar.TestSomething testMethod=test_something_else>
+        s
+            : str
+            : (eg) <__main__.TestOneTwo testMethod=test_three_four>
+            : (eg) <tests.test_grammar.TestSomething testMethod=test_something_else>
 
-    returns
-        -> tuple[str]
-        -> module, class, method
-        -> (eg) ('__main__', 'TestOneTwo', 'test_three_four')
-        -> (eg) ('tests.test_grammar', 'TestSomething', 'test_something_else')
+        returns
+            > tuple[str]
+            > module, class, method
+            > (eg) ('__main__', 'TestOneTwo', 'test_three_four')
+            > (eg) ('tests.test_grammar', 'TestSomething', 'test_something_else')
     """
-    pattern = r'<([\w\.]+)\.(\w+) testMethod=(\w+)>'
+    # pattern = r'<([\w\.]+)\.(\w+) testMethod=(\w+)>'
+    pattern = r'<(\w+)(\.\w+)* testMethod=((?:\w+)(?:\.\w+)*)>'
     m = re.match(pattern, s)
     if m:
         return m.groups()
@@ -44,10 +45,11 @@ def scrub(s):
             : str
 
         returns
-            -> str
-            -> leading 'Test' or 'test' removed from both class and method names
+            > str
+            > leading 'Test' or 'test' removed from both class and method names
+            > remove leading '.' as well
     """
-    return re.sub('^[Tt]est_?', '', s)
+    return re.sub(r'^\.?[Tt]est_?', '', s)
 
 
 def space(s):
@@ -56,7 +58,7 @@ def space(s):
             : str
 
         returns
-            -> input s with underscores replaced by spaces '_' -> ' '
+            > input s with underscores replaced by spaces '_' -> ' '
     """
     return re.sub('_', ' ', s)
 
@@ -85,12 +87,14 @@ class Result(TextTestResult):
 
         s = repr(t)
         try:
-            names = extract_names(s)
+            mod, cls, meth = extract_names(s)
         except ValueError:
             # think this is when the go loader gets snarled by failing imports
             raise Exception('what is happening here?')
 
-        mod, cls, meth = (scrub(n) for n in names)
+        cls = scrub(cls)
+        meth = scrub(meth)
+        # mod, cls, meth = (scrub(n) for n in names)
         cls, meth = (space(s) for s in (cls, meth))
 
         output = dedent(f'''\

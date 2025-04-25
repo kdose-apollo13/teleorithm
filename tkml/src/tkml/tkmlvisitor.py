@@ -7,7 +7,11 @@
 from parsimonious.nodes import NodeVisitor
 
 
-class TKMLFilter(NodeVisitor):
+class TKMLVisitor(NodeVisitor):
+    """
+        knows how to walk tkml tree and extract components
+        component -> {'type': _, 'props': _, 'parts': _}
+    """
     def visit_tkml(self, node, visited):
         return visited[1]
 
@@ -58,19 +62,19 @@ class TKMLFilter(NodeVisitor):
         return visited or node.text
 
 
-def comb_for_components(grammar_tree, node_filter):
+def walk_tree_for_components(grammar_tree, visitor):
     """
         grammar_tree
             : parsimonious.nodes.Node
         
-        node_filter
+        visitor
             : parsimonious.nodes.NodeVisitor
 
         returns
             -> dict
     """
     try:
-        comptree = node_filter.visit(grammar_tree)
+        comptree = visitor.visit(grammar_tree)
     except Exception as e:
         raise e
     else:

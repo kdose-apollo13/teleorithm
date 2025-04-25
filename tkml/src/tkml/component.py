@@ -9,7 +9,9 @@ from textwrap import dedent
 from parsimonious.nodes import NodeVisitor
 
 from tkml.grammar import tkml_tree
-from tkml.tkmlfilter import comb_for_components, TKMLFilter
+
+
+from tkml.tkmlvisitor import walk_tree_for_components, TKMLVisitor
 from tkml.utils import key_and_value_from
 
 
@@ -68,7 +70,7 @@ def comp_tree(source):
             -> {'type': '', 'props': {}, 'parts': []}
     """
     tree = tkml_tree(source)
-    wild_comp_tree = comb_for_components(tree, TKMLFilter())
+    wild_comp_tree = walk_tree_for_components(tree, TKMLVisitor())
     refined_comp_tree = translate_blockdefined_props(wild_comp_tree)
     return refined_comp_tree
 

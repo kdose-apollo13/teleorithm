@@ -75,6 +75,22 @@ class IGrammar(Grammar):
         else:
             return tree
 
+def tkml_tree(source):
+    """
+        source
+            : str
+            : tkml-compliant source text
+
+        returns
+            > parsimonious.nodes.Node
+
+        raises
+            ! ValueError
+
+    """
+    tree = IGrammar(TKML_GRAMMAR).parse(source)
+    return tree
+
 
 if __name__ == '__main__':
 

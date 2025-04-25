@@ -6,176 +6,90 @@ from klab.ututils import Spec, Runner
 
 from parsimonious.nodes import Node
 from parsimonious.grammar import Grammar
+from parsimonious.exceptions import ParseError
 
 from collections import OrderedDict
-from textwrap import dedent
 
-from tkml.grammar import TKML_GRAMMAR, grammify, parse, tkml_tree
-from tkml.utils import count_nodes
+from tkml.grammar import TKML_GRAMMAR, IGrammar
 
 
-# all test methods convey setUp state to tearDown state
-class test_equivalent_computations(Spec):
+class test_calling_parsimonious_Grammar(Spec):
     def setUp(self):
-        self.x = 2
+        self.valid_def = 'root = "23"'
+        self.lousy_def = 'root ! "23"'
 
-    def test_computation(self):
-        def c(cls):
-            cls.x += 1
-        # even c is an object -> a __getattribute__ incrementer object
-        # it returns None
-        # when called, an attribute incrementer takes an object
-        # and an attribute and tries to increment it by integer 1
-        def attribute_incrementer(o, a):
-            try:
-                x = getattr(o, a)
-            except:
-                raise Exception('could not increment attribute')
-            else:
-                setattr(o, a, x + 1)
+    def test_on_valid_grammar_definition_returns_Grammar(self):
+        self.grammar = Grammar(self.valid_def)
+        self.asrt(isinstance(self.grammar, Grammar))
 
-        # c(self)
-        attribute_incrementer(self, 'x')
+    def test_on_lousy_grammar_definition_raises_ParseError(self):
+        with self.rais(ParseError):
+            self.grammar = Grammar(self.lousy_def)
+
+
+class test_calling_parsimonious_Grammar_parse(Spec):
+    def setUp(self):
+        valid_def = 'root = "23"'
+        self.grammar = Grammar(valid_def)
+        self.valid_source = '23'
+        self.lousy_source = 'absent'
+
+    def test_on_valid_source_text_returns_Node(self):
+        tree = self.grammar.parse(self.valid_source)
+        self.asrt(isinstance(tree, Node))
+
+    def test_on_lousy_source_text_raises_ParseError(self):
+        with self.rais(ParseError):
+            tree = self.grammar.parse(self.lousy_source)
     
-    def tearDown(self):
-        self.equa(self.x, 3)
 
-
-
-class test_TKML_grammar_string_when_grammified(Spec):
+class test_calling_IGrammar(Spec):
     def setUp(self):
-        self.s = TKML_GRAMMAR
+        self.valid_def = 'root = "23"'
+        self.lousy_def = 'root ! "23"'
 
-    def test_returns_Grammar(self):
-        self.asrt(isinstance(self.s, str))
-        # 
-        g = grammify(self.s)
-        # 
-        self.asrt(isinstance(g, Grammar))
-
-        # TODO: ok -> tell me some thing interesting about this Grammar
-
-
-class test_empty_grammar_string_when_grammified(Spec):
-    def setUp(self):
-        self.s = ''
-
-    def test_returns_Grammar(self):
-        g = grammify(self.s)
-        self.asrt(isinstance(g, Grammar))
-
-        # TODO: ok now what? what relation does the Grammar bear to anything?
+    def test_with_valid_grammar_definition_returns_IGrammar(self):
+        grammar = IGrammar(self.valid_def)
+        self.asrt(isinstance(grammar, IGrammar))
+        self.asrt(isinstance(grammar, Grammar))
+        self.asrt(isinstance(grammar, OrderedDict))
+        self.equa(
+            list(grammar.keys()),
+            ['root']
+        )
+        
+    def test_with_lousy_grammar_definition_raises_ValueError(self):
+        with self.rais(ValueError):
+            grammar = IGrammar(self.lousy_def)
         
 
-class test_trivial_grammar_string_when_grammified(Spec):
+class test_calling_IGrammar_parse(Spec):
     def setUp(self):
-        self.s = 'root = "static"'
+        valid_def = 'root = "23"'
+        self.grammar = IGrammar(valid_def)
+        self.valid_source = '23'
+        self.lousy_source = 'absent'
 
-    def test_returns_Grammar(self):
-        g = grammify(self.s)
-        self.asrt(isinstance(g, Grammar))
-
-    def test_Grammar_is_an_OrderedDict(self):
-        g = grammify(self.s)
-        self.asrt(isinstance(g, OrderedDict))
-
-
-class test_unicode_range_string_when_grammified(Spec):
-    def setUp(self):
-        self.s = dedent(r'''
-        root = text ws "!"
-        text = ~"[\u4E00-\u9FFF]+"
-        ws = ~"\\s*"
-        ''')
-
-    def test_returns_Grammar(self):
-        g = grammify(self.s)
-        self.asrt(isinstance(g, Grammar))
-
-
-class test_trivial_source_string_and_grammar_when_parsed(Spec):
-    def setUp(self):
-        gstring = 'root = "static"'
-        self.grammar = grammify(gstring)
-        self.source = 'static'
-
-    def test_returns_Node(self):
-        n = parse(self.source, self.grammar)
-        self.asrt(isinstance(n, Node))
-
-    def test_Node_text_matches_source(self):
-        n = parse(self.source, self.grammar)
-        self.equa(n.text, self.source)
-
-    def test_interpret_depth_first_traversal_of_Node_as_tree(self):
-        def dfs(root):
-            stack = list()
-            stack.append(root)
-            found = []
-            
-            while len(stack) > 0:
-                node = stack.pop()
-                stack.extend(c for c in node.children if c not in found)
-                yield node.text
-
-        tree = dfs(parse(self.source, self.grammar))
-        # print(*list(tree), sep='\n')
-
-        # TODO: how to test if tree?
-        self.asrt(True)
-
-
-class test_bad_tkml(Spec):
-    """
-        TODO: identify specific error and location in source for helpful debug msgs
-    """
-    def setUp(self):
-        self.s = 'Name [ prop: wrong_braces ]'
-
-    def test_raises_ValueError_on_unparseable_source(self):
-        with self.rais(ValueError):
-            tree = tkml_tree(self.s)
-
-
-class test_empty_block_without_whitespace(Spec):
-    def setUp(self):
-        self.s = 'Name{}'
-
-    def test_parses_into_Node_tree(self):
-        tree = tkml_tree(self.s)
+    def test_with_valid_source_text_returns_Node(self):
+        tree = self.grammar.parse(self.valid_source)
         self.asrt(isinstance(tree, Node))
-
-    def test_tree_has_11_nodes(self):
-        tree = tkml_tree(self.s)
-        self.equa(count_nodes(tree), 11)
-
-
-class test_empty_block_with_whitespace(Spec):
-    def setUp(self):
-        self.s = '   Name {   }     '
-
-    def test_parses_into_Node_tree(self):
-        tree = tkml_tree(self.s)
-        self.asrt(isinstance(tree, Node))
-
-    def test_tree_has_11_nodes(self):
-        tree = tkml_tree(self.s)
-        self.equa(count_nodes(tree), 11)
-
-
-class test_block_with_and_without_whitespace(Spec):
-    def setUp(self):
-        self.spacious = ' Name {  } '
-        self.compact = 'Name{}'
-
-    def test_have_same_node_quantity(self):
         self.equa(
-            count_nodes(tkml_tree(self.spacious)),
-            count_nodes(tkml_tree(self.compact))
+            tree.full_text,
+            self.valid_source
+        )
+        self.equa(
+            tree.expr_name,
+            'root'
+        )
+        self.equa(
+            tree.end,
+            len(self.valid_source)
+
         )
 
-    def test_spacious_and_compact_trees_differ_somehow(self):
-        self.asrt(tkml_tree(self.spacious) != tkml_tree(self.compact))
+    def test_with_lousy_source_text_raises_ValueError(self):
+        with self.rais(ValueError):
+            node = self.grammar.parse(self.lousy_source)
 
 
 if __name__ == '__main__':

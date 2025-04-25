@@ -1,22 +1,25 @@
 """
     | teleorithm |
 
-    !restructure tests around state¡
+    ???
+    structure tests around state
     use full setUp tearDown symmetry
     test methods become shared pivots
     around whatever you care to track
-    
-    ~~ everything must have a name ~~
-    that thing you get back from a function?
-    name it -> everything must have a name
-    name = classify = type = consider
 
-    at the very least it is [something]_object
+    ???
+    functions are objects like relays
+    state changes by functional flows
+
+    ???
+    function -> noun
+    TestCase -> synonyms
+
     EVERYTHING in python is at least an object
-    if you can't name the object you're wielding,
-    then the object is wielding you
+    so at the very least ANYTHING is an object
+    consider what state it transforms and how
+    what kind of object is it? SOMETHING_object
 
-    -limit the unconfidence horizon
     -verify robust first principles
     -specify, formalize, ontologize
     -if appropriate -> tell a story
@@ -26,8 +29,8 @@
     monkey like complicated?
     NO!
     MONKEY LIKE SIMPLE
-    want do EVERY day?
-    make simple
+    wanna do EVERY day?
+    make do simple
 
 ONTOLOGY
 -concepts and how they relate to each other
@@ -42,7 +45,6 @@ ONTOLOGY
     //       100 lines -> 0%       //
     // -------------------------- //
     // hack hack hack hack hack h //
-    // informal joy artist lunati //
     // employ repl, docs, machete //
     // achieve precise transforms //
     // with basic data structures //

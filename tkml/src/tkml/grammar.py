@@ -5,6 +5,7 @@ from parsimonious.grammar import Grammar
 from parsimonious.exceptions import ParseError
 
 
+# TODO: analyze for associativity problems
 # TODO: encompass unicode?
 
 # order matters -> (x / y / z) will disambiguate if multiply matched
@@ -33,68 +34,60 @@ Block {
 }
 '''
 
-
-def grammify(s):
+class IGrammar(Grammar):
     """
-        s
-            : str
-            : PEG grammar
-
-        returns
-            -> parsimonious.grammar.Grammar
-
-        raises
-            -> ValueError
-    """
-    try:
-        g = Grammar(s)
-    except Exception as e:
-        raise ValueError(e)
-    else:
-        return g
-
-
-def parse(source, grammar):
-    """
-        source
-            : str
-            : grammar-compliant source text
-
-        grammar
+        Grammar
             : parsimonious.grammar.Grammar
-
-        returns
-            -> parsimonious.nodes.Node
-            -> represents root of tree
-
-        raises
-            -> ValueError
+            : OrderedDict with regex powers to parse strings against rules
     """
-    try:
-        tree = grammar.parse(source)
-    except ParseError as e:
-        raise ValueError(e)
-    return tree
+    
+    def __init__(self, definition):
+        """
+            definition
+                : str
+                : defines PEG grammar
 
+            raises
+                ! ValueError
+        """
+        try:
+            super().__init__(definition)
+        except ParseError as e:
+            raise ValueError('definition could not be interpreted as grammar')
 
-def tkml_tree(source):
-    """
-        source
-            : str
+    def parse(self, source):
+        """
+            source
+                : str
+                : source text seeking classification according to rules
+            
+            returns
+                > parsimonious.nodes.Node
+                > root node of tree describing hierarchy of matched rules
 
-        returns
-            -> parsimonious.nodes.Node
-    """
-    return parse(source, grammify(TKML_GRAMMAR))
+            raises
+                ! ValueError
+        """
+        try:
+            tree = super().parse(source)
+        except ParseError as e:
+            raise ValueError('no path of acceptance was found for this source')
+        else:
+            return tree
 
 
 if __name__ == '__main__':
-    grammar = grammify(TKML_GRAMMAR)
-    n = grammar['number'].parse('23')
-    assert n.full_text == '23'
 
-    node = parse(EXAMPLE_SOURCE, grammify(TKML_GRAMMAR))
-    tree = tkml_tree(EXAMPLE_SOURCE)
-    assert node == tree
-    assert tree.full_text == EXAMPLE_SOURCE
+    source = 'Tkml {}'
+    tree = IGrammar(TKML_GRAMMAR).parse(source)
+    assert tree.full_text == source
+    assert tree.expr_name == 'tkml'
+    assert tree.end == len(source)
+
+    source = '23'
+    grammar = IGrammar(TKML_GRAMMAR)
+    tree = grammar['number'].parse(source)
+    assert tree.full_text == source
+    assert tree.expr_name == 'number'
+    assert tree.end == len(source)
 

@@ -8,7 +8,7 @@ from parsimonious.exceptions import ParseError
 # TODO: analyze for associativity problems
 # TODO: encompass unicode?
 
-# order matters -> (x / y / z) will disambiguate if multiply matched
+# order matters -> (x / y / z) will disambiguate by first match
 TKML_GRAMMAR = r'''
 tkml        = ws block ws
 block       = identifier ws "{" ws item* ws "}"

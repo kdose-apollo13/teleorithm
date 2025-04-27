@@ -6,8 +6,6 @@
 """
 from textwrap import dedent
 
-from parsimonious.nodes import NodeVisitor
-
 from tkml.grammar import tkml_tree
 from tkml.tkmlvisitor import TKMLVisitor
 from tkml.utils import key_and_value
@@ -15,10 +13,14 @@ from tkml.utils import key_and_value
 
 # in tkml these properties are defined as nested blocks
 # to allow multiple key-value pairs
-MULTIPROP_NAMES = ['bind', 'config', 'grid']
+MULTIPROP_NAMES = [
+    'bind', 'config', 'grid', 'grid_rowconfigure', 'grid_columnconfigure'
+]
 
 # for splitting props into style and script
-SCRIPT_KEYS = ['id', 'bind', 'config']
+SCRIPT_KEYS = [
+    'id', 'bind', 'config'
+]
 
 
 def move_block_props(component):

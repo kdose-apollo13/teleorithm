@@ -68,13 +68,13 @@ class TKMLVisitor(NodeVisitor):
             tree
                 : parsimonious.nodes.Node
 
-            raises
-                ! parsimonious.exceptions.VisitationError if catastrophic
-                ! may succeed despite retrieving bad values
-
             returns
                 > dict
                 > root component - may contain nested components
+
+            raises
+                ! parsimonious.exceptions.VisitationError if catastrophic
+                ! may succeed despite retrieving bad values
         """
         try:
             root = super().visit(tree)

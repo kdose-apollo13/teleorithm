@@ -49,7 +49,7 @@ def count_nodes_another_way(tree):
     return len(tree_text.splitlines())
 
 
-def key_and_value_from(d):
+def key_and_value(d):
     """
         d
             : dict
@@ -84,7 +84,7 @@ if __name__ == '__main__':
     assert count_nodes_another_way(tree) == 22
 
     d = {'name': {'key': 'val'}}
-    k, v = key_and_value_from(d)
+    k, v = key_and_value(d)
     assert k == 'name'
     assert v == {'key': 'val'}
     

@@ -9,10 +9,8 @@ from textwrap import dedent
 from parsimonious.nodes import NodeVisitor
 
 from tkml.grammar import tkml_tree
-
-
-from tkml.tkmlvisitor import walk_tree_for_components, TKMLVisitor
-from tkml.utils import key_and_value_from
+from tkml.tkmlvisitor import TKMLVisitor
+from tkml.utils import key_and_value
 
 
 # in tkml these properties are defined as nested blocks
@@ -23,150 +21,102 @@ MULTIPROP_NAMES = ['bind', 'config', 'grid']
 SCRIPT_KEYS = ['id', 'bind', 'config']
 
 
-def translate_blockdefined_props(comptree):
+def move_block_props(component):
     """
-        comptree
+        component
             : dict
-            : {
+            : { 
                 'type': '', 
                 'props': {}, 
-                'parts': [{'type': 'config', 'props': {}, parts: []}, ...]
-            }
-
+                'parts': [{'type': 'config', 'props': {}, parts: []}, ...] 
+              }
+        
         returns
-            -> dict
-            -> {
+            > dict
+            > {
                 'type': '',
                 'props': {'config': {}},
                 'parts': []
-            }
+              }
     """
-    name, props = key_and_value_from(comptree)
-    parts = comptree['parts']
+    _, props = key_and_value(component)
+    parts = component['parts']
 
     block_props = {}
-    
+
     for part in parts:
         if (n := part['type']) in MULTIPROP_NAMES:
             prop = {n: part['props']}
             block_props.update(prop)
-    
-    new_comptree = {}
-    new_comptree['type'] = comptree['type']
-    new_comptree['props'] = comptree['props']
-    new_comptree['parts'] = [p for p in parts if p['type'] not in MULTIPROP_NAMES]
-    new_comptree['props'].update(block_props)
-    return new_comptree
+
+    new = dict(component)
+    new['props'].update(block_props)
+    new['parts'] = [c for c in parts if c['type'] not in MULTIPROP_NAMES]
+    return new
 
 
-def comp_tree(source):
-    """
-        source
-            : str
-            : tkml source text
-
-        returns
-            -> dict
-            -> {'type': '', 'props': {}, 'parts': []}
-    """
-    tree = tkml_tree(source)
-    wild_comp_tree = walk_tree_for_components(tree, TKMLVisitor())
-    refined_comp_tree = translate_blockdefined_props(wild_comp_tree)
-    return refined_comp_tree
-
-
-def comp_name_and_props(comptree):
-    """
-        comptree
-            : dict
-            : {'type': '', 'props': {}, 'parts': []}
-
-        returns
-            -> dict
-            -> {name: {prop: val, ...}}
-            -> maps type of component to its properties
-    """
-    d = {comptree['type']: comptree['props']}
-    return d
-
-
-def style_props_and_script_props(props, script_keys):
+def split_props(props):
     """
         props
             : dict
-            : {prop: val, ...}
-
-        script_keys
-            : list[str]
-            : ['id', 'config', 'bind', ...]
 
         returns
-            -> tuple[dict, dict]
-            -> style props, script props
+            > tuple[dict]
+            > script props, style props
     """
-    style_props = {}
-    script_props = {}
-
-    for k, v in props.items():
-        if k in script_keys:
-            script_props.update({k: v})
-        else:
-            style_props.update({k: v})
-
-    return style_props, script_props 
+    script = {k: v for k, v in props.items() if k in SCRIPT_KEYS}
+    style = {k: v for k, v in props.items() if k not in SCRIPT_KEYS}
+    return script, style
 
 
-def prop_tree_from_comp_tree(comptree):
+def separate_props(component, script, style):
     """
-        comptree
+        component
+            : dict
+
+        script
+            : dict
+
+        style
             : dict
 
         returns
-            -> dict
+            > dict
+            > new component with props split into script and style specific
     """
-    nameprops = comp_name_and_props(comptree)
-    name, props = key_and_value_from(nameprops)
-    style, scrip = style_props_and_script_props(props, SCRIPT_KEYS)
-    tree = {}
-    tree['type'] = comptree['type']
-    tree['style_props'] = style
-    tree['script_props'] = scrip
-    tree['parts'] = [prop_tree_from_comp_tree(p) for p in comptree['parts']]
-    return tree
+    new = {}
+    new['type'] = component['type']
+    new['script_props'] = script
+    new['style_props'] = style
+    new['parts'] = component['parts']
+    return new
+
+
+def rebuild(component):
+    """
+        component
+            : dict
+
+        returns
+            > dict
+            > new component rearchitected including all nested parts
+    """
+    restructured = move_block_props(component)
+    script, style = split_props(restructured['props'])
+    new = separate_props(restructured, script, style)
+    new['parts'] = [rebuild(c) for c in new['parts']]
+    return new
 
 
 if __name__ == '__main__':
-    
-    multiprop = 'Tkml { config: 0: 1 }'
-    multitree = comp_tree(multiprop)
-    assert multitree == {
+    source = 'Tkml { config: 0: 1 background: #123456}'
+    tree = tkml_tree(source)
+    root = TKMLVisitor().visit(tree)
+    widget_ready = rebuild(root)
+    assert widget_ready == {
         'type': 'Tkml',
-        'props': {
-            'config': {'0': 1}
-        },
-        'parts': []
-    }
-
-    blockprop = 'Tkml { config { 0: 1 }}'
-    blocktree = comp_tree(blockprop)
-    assert blocktree == multitree
-
-    # ---------
-    # ---------
-
-    source = 'Scrollable {id: w23 bg: #123123}'
-    comptree = comp_tree(source)
-    assert comptree == {
-        'type': 'Scrollable',
-        'props': {'id': 'w23', 'bg': '#123123'},
-        'parts': []
-    }
-
-    proptree = prop_tree_from_comp_tree(comptree)
-    assert proptree == {
-        'type': 'Scrollable',
-        'style_props': {'bg': '#123123'},
-        'script_props': {'id': 'w23'},
+        'script_props': {'config': {'0': 1}},
+        'style_props': {'background': '#123456'},
         'parts': []
     }
 

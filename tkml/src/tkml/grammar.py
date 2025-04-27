@@ -17,7 +17,7 @@ property    = identifier ws ":" ws (property / value)
 value       = number / color / identifier / string
 string      = ~r'"([^\n"\\]|(\\[^\\]))*"' / ~r"'([^\n'\\]|(\\[^\\]))*'"
 identifier  = ~r"[a-zA-Z0-9_]+(\.[a-zA-Z0-9_]+)*" 
-color       = "#" ~"[a-zA-Z0-9]{6}"
+color       = ~"#[a-zA-Z0-9]{6}"
 number      = ~r"[0-9]+(\.[0-9]+)*"
 ws          = ~"\\s*"
 '''
@@ -94,7 +94,8 @@ def tkml_tree(source):
 
 if __name__ == '__main__':
 
-    source = 'Tkml {}'
+    # source = 'Tkml {}'
+    source = EXAMPLE_SOURCE
     tree = IGrammar(TKML_GRAMMAR).parse(source)
     assert tree.full_text == source
     assert tree.expr_name == 'tkml'

@@ -4,16 +4,10 @@
 from unittest import main, TestCase
 from klab.ututils import Spec, Runner
 
-from parsimonious.nodes import Node
-from parsimonious.grammar import Grammar
-
 from textwrap import dedent
-from tkinter import *
 
 from tkml.grammar import tkml_tree
-from tkml.tkmlvisitor import walk_tree_for_components, TKMLVisitor
-
-from tkml.utils import count_nodes
+from tkml.tkmlvisitor import TKMLVisitor
 
 
 class test_curly_braces_within_an_f_string(Spec):
@@ -26,6 +20,7 @@ class test_curly_braces_within_an_f_string(Spec):
             s,
             'outer braces { all the whatever forever and ever }'
         )
+
 
 class test_single_and_multiline_sources(Spec):
     def setUp(self):
@@ -42,6 +37,7 @@ class test_single_and_multiline_sources(Spec):
         tree_multi = tkml_tree(self.multi)
         self.equa(tree_single, tree_multi)
         
+
 class test_trivial_tkml_tree_when_walked_for_components(Spec):
     def setUp(self):
         source = 'Name {}'
@@ -49,11 +45,11 @@ class test_trivial_tkml_tree_when_walked_for_components(Spec):
         self.walker = TKMLVisitor()
 
     def test_returns_dict(self):
-        comps = walk_tree_for_components(self.tree, self.walker)
+        comps = self.walker.visit(self.tree)
         self.asrt(isinstance(comps, dict))
 
     def test_returns_expected_components(self):
-        comps = walk_tree_for_components(self.tree, self.walker)
+        comps = self.walker.visit(self.tree)
         self.equa(
             comps,
             {
@@ -74,7 +70,7 @@ class test_basic_tkml_tree_when_walked_for_components(Spec):
         self.walker = TKMLVisitor()
 
     def test_returns_expected_component_dict(self):
-        comps = walk_tree_for_components(self.tree, self.walker)
+        comps = self.walker.visit(self.tree)
         self.equa(
             comps,
             {
@@ -100,7 +96,7 @@ class test_medium_tkml_tree_when_walked_for_components(Spec):
         self.walker = TKMLVisitor()
 
     def test_returns_expected_component_dict(self):
-        comps = walk_tree_for_components(self.tree, self.walker)
+        comps = self.walker.visit(self.tree)
         self.equa(
             comps,
             {
@@ -134,7 +130,7 @@ class test_example_tkml_tree_when_walked_for_components(Spec):
         self.walker = TKMLVisitor()
 
     def test_returns_expected_component_dict(self):
-        comps = walk_tree_for_components(self.tree, self.walker)
+        comps = self.walker.visit(self.tree)
         self.equa(
             comps,
             {

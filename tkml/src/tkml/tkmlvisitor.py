@@ -5,12 +5,14 @@
     that is why [0] in some visit methods
 """
 from parsimonious.nodes import NodeVisitor
+from parsimonious.exceptions import VisitationError
 
 
 class TKMLVisitor(NodeVisitor):
     """
         knows how to walk tkml tree and extract components
         component -> {'type': _, 'props': _, 'parts': _}
+        use .visit(Node)
     """
     def visit_tkml(self, node, visited):
         return visited[1]
@@ -61,26 +63,32 @@ class TKMLVisitor(NodeVisitor):
     def generic_visit(self, node, visited):
         return visited or node.text
 
+    def visit(self, tree):
+        """
+            tree
+                : parsimonious.nodes.Node
 
-def walk_tree_for_components(grammar_tree, visitor):
-    """
-        grammar_tree
-            : parsimonious.nodes.Node
-        
-        visitor
-            : parsimonious.nodes.NodeVisitor
+            raises
+                ! parsimonious.exceptions.VisitationError if catastrophic
+                ! may succeed despite retrieving bad values
 
-        returns
-            -> dict
-    """
-    try:
-        comptree = visitor.visit(grammar_tree)
-    except Exception as e:
-        raise e
-    else:
-        return comptree
+            returns
+                > dict
+                > root component - may contain nested components
+        """
+        try:
+            root = super().visit(tree)
+        except VisitationError as e:
+            raise e
+        else:
+            return root
 
 
 if __name__ == '__main__':
-    pass
+    from tkml.grammar import tkml_tree
+    source = 'App { blah: 22.1 }'
+    tree = tkml_tree(source)
+    comps = TKMLVisitor().visit(tree)
+    print(comps)
+
 

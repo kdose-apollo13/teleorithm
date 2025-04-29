@@ -1,3 +1,5 @@
+import tomllib
+
 from parsimonious.grammar import Grammar
 from parsimonious.nodes import Node, NodeVisitor
 from parsimonious.exceptions import ParseError

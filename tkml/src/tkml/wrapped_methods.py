@@ -20,3 +20,6 @@ def grid(i, d):
 def config(i, d):
     i.config(**d)
 
+def bind(i, d):
+    raise NotImplementedError()
+

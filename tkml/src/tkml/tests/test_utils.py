@@ -2,6 +2,7 @@
     | teleorithm |
     
     get loose get rhythm
+    wonderful test style
 """
 from unittest import main, TestCase
 from klab.ututils import Spec, Runner
@@ -12,12 +13,12 @@ from tkml.utils import overwrite_dict
 class test_overwrite_S_with_T_where_values_nondict(Spec):
     
     def test_updates_S_with_new_values(self):
-        S = dict(a=1, b=2, c=3)
-        T = dict(     b=6, c=7)
+        S = dict(a=1, b=2, c=3     )
+        T = dict(     b=6, c=7, d=8)
         r = overwrite_dict(S, T)
         self.equa(
             r,
-            {'a': 1, 'b': 6, 'c': 7}
+            dict(a=1, b=6, c=7, d=8)
         )
 
     def test_updates_S_with_new_values_2(self):
@@ -26,7 +27,7 @@ class test_overwrite_S_with_T_where_values_nondict(Spec):
         r = overwrite_dict(S, T)
         self.equa(
             r,
-            {'a': 1, 'b': 6, 'c': 7, 'd': 4}
+            dict(a=1, b=6, c=7, d=4)
         )
         
     def test_updates_S_with_new_values_3(self):
@@ -35,7 +36,7 @@ class test_overwrite_S_with_T_where_values_nondict(Spec):
         r = overwrite_dict(S, T)
         self.equa(
             r,
-            {'a': 5, 'b': 6, 'c': 7, 'd': 8}
+            dict(a=5, b=6, c=7, d=8)
         )
 
     def test_updates_S_with_new_values_4(self):
@@ -44,8 +45,9 @@ class test_overwrite_S_with_T_where_values_nondict(Spec):
         r = overwrite_dict(S, T)
         self.equa(
             r,
-            {'a': 5, 'b': 6, 'c': 7, 'd': 8}
+            dict(a=5, b=6, c=7, d=8)
         )
+
 
 class test_overwrite_S_with_T_where_values_dict(Spec):
 

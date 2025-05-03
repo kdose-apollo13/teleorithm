@@ -1,9 +1,9 @@
-[Tk]
+[Default.App]
 title = 'Failure is Inevitable'
 geometry = '400x900'
 
 
-[Scrollable]
+[Default.Scrollable]
 # id: container
 Frame.config = { bd = 2, relief = 'solid' }
 Frame.grid = { row = 0, column = 0, sticky = 'nsew' }
@@ -23,4 +23,16 @@ Frame.Canvas.Frame.config = { }
 Frame.Canvas.Frame.grid_columnconfigure = { col = 0, weight = 1 }
 
 
+[Default.Leaf]
+Frame.config = { bd = 2, relief = 'solid' }
+Frame.grid = { row = 0, column = 0, sticky = 'nsew' }
+Frame.grid_rowconfigure = { row = 0, weight = 1 }
+Frame.grid_columnconfigure = { col = 0, weight = 1 }
+
+Frame.Canvas.config = { width = 10, background = '#2299AA' }
+Frame.Canvas.grid = { row = 0, column = 0, sticky = 'ns' }
+
+Frame.Text.config = { height = 1, width = 20 }
+Frame.Text.grid = { row = 0, column = 1, sticky = 'nesw' }
+Frame.Text.text = 'hello'
 

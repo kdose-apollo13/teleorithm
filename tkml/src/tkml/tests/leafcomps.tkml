@@ -1,0 +1,43 @@
+_ {
+    App {
+        Tk {
+            id: root
+        }
+    }
+
+    Scrollable {
+        Frame {
+            id: container
+
+            Canvas {
+                id: viewport
+                config: yscrollcommand: scrollbar.set
+                create_window { xy: '0,0' window: 'content' anchor: 'nw' }
+
+                Frame { 
+                    id: content 
+                }
+            }
+
+            Scrollbar { 
+                id: scrollbar
+                config: command: viewport.yview
+            }
+        }
+    }
+
+    Leaf {
+        Frame {
+            id: container
+
+            Canvas {
+                id: hili
+            }
+
+            Text {
+                id: textbox
+                text: 'cosmo! go!'
+            }
+        }
+    }
+}

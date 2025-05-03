@@ -11,9 +11,9 @@ from tkml.tkmlvisitor import TKMLVisitor
 from tkml.utils import key_and_value
 
 
-# these properties are defined as nested blocks to allow multiple key-value pairs
 BLOCK_PROPS = [
-    'bind', 'config', 'grid', 'grid_rowconfigure', 'grid_columnconfigure'
+    'bind', 'config', 'grid', 'grid_rowconfigure', 'grid_columnconfigure',
+    'create_window'
 ]
 
 
@@ -35,9 +35,7 @@ def move_block_props(component):
                 'parts': []
               }
     """
-    _, props = key_and_value(component)
     parts = component['parts']
-
     block_props = {}
 
     for part in parts:

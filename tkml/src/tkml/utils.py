@@ -77,6 +77,12 @@ def load_toml_file(path):
     return d
 
 
+def load_tkml_file(path):
+    with open(path, 'rt') as r:
+        s = r.read()
+    return s
+    
+
 def split_keypath(s):
     """
         s

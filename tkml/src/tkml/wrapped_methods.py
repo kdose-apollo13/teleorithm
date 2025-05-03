@@ -23,3 +23,13 @@ def config(i, d):
 def bind(i, d):
     raise NotImplementedError()
 
+def title(i, s):
+    i.title(s)
+
+def geometry(i, s):
+    i.geometry(s)
+
+def text(i, s):
+    i.delete('1.0', tkinter.END)
+    i.insert('1.0', s)
+

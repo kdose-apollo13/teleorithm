@@ -24,7 +24,7 @@ def move_block_props(component):
             : { 
                 'type': '', 
                 'props': {}, 
-                'parts': [{'type': 'config', 'props': {}, parts: []}, ...] 
+                'parts': [{'type': 'config', 'props': {}, 'parts': []}, ...] 
               }
         
         returns

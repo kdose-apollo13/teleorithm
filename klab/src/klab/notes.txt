@@ -1,0 +1,6 @@
+parameter -> placeholder
+argument -> actual
+
+parameter is name referring to actual object passed in to callable
+
+

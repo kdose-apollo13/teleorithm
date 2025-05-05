@@ -34,8 +34,26 @@ class TKMLVisitor(NodeVisitor):
     def visit_item(self, node, visited):
         return visited[0][0]
 
-    def visit_property(self, node, visited):
-        return {visited[0]: visited[4][0]}
+    def visit_prop(self, node, visited):
+        identifier = visited[0]
+        value_or_nested_props = visited[4][0]
+
+        if isinstance(value_or_nested_props, dict):
+            return {identifier: value_or_nested_props}
+        else:
+            return {identifier: value_or_nested_props}
+
+    def visit_nested_props(self, node, visited):
+        inner_props_list = visited[2]
+        nested_props_dict = {}
+        for inner_prop_item in inner_props_list:
+                 nested_props_dict.update(inner_prop_item)
+        return nested_props_dict
+
+    def visit_inner_prop(self, node, visited):
+        identifier = visited[0]
+        value = visited[4]
+        return {identifier: value}
 
     def visit_value(self, node, visited):
         return visited[0]
@@ -86,7 +104,7 @@ class TKMLVisitor(NodeVisitor):
 
 if __name__ == '__main__':
     from tkml.grammar import tkml_tree
-    source = 'App { blah: 22.1 }'
+    source = 'App { blah: { thing: 22.1 }}'
     tree = tkml_tree(source)
     comps = TKMLVisitor().visit(tree)
     print(comps)

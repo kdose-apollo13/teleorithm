@@ -1,4 +1,5 @@
-_ {
+Components {
+
     App {
         Tk {
             id: root
@@ -11,8 +12,8 @@ _ {
 
             Canvas {
                 id: viewport
-                config: yscrollcommand: scrollbar.set
-                create_window { xy: '0,0' window: 'content' anchor: 'nw' }
+                config: { yscrollcommand: scrollbar.set }
+                create_window: { x: 0 y: 0 window: content anchor: 'nw' }
 
                 Frame { 
                     id: content 
@@ -21,7 +22,7 @@ _ {
 
             Scrollbar { 
                 id: scrollbar
-                config: command: viewport.yview
+                config: { command: viewport.yview }
             }
         }
     }

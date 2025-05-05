@@ -12,25 +12,38 @@ import tomllib
 
 from tkml.grammar import tkml_tree
 from tkml.tkmlvisitor import TKMLVisitor
-from tkml.component import rebuild
-from tkml.widget import apply_props
 from tkml.errors import TkmlError
-from tkml.utils import load_tkml_file, load_toml_file, key_and_value
+from tkml.utils import (
+    load_tkml_file, load_toml_file, key_and_value, load_toml_string, overwrite_dict
+)
 
 
-class test_load_tkml_file_leafcomps(Spec):
+def component_hierarchy(tkml):
+    """
+        tkml
+            : str
+
+        returns
+            > dict
+    """
+    node = tkml_tree(tkml)
+    root = TKMLVisitor().visit(node)
+    return root
+
+
+class test_load_tkml_file_COMPONENTS(Spec):
     def setUp(self):
-        self.path = 'leafcomps.tkml'
+        self.path = '../components.tkml'
 
-    def test_returns_string(self):
-        self.maxDiff = None
+    def test_returns_tkml_string_defining_components_under_dummy_root(self):
         s = load_tkml_file(self.path)
         self.asrt(isinstance(s, str))
 
         self.equa(
             s,
             dedent('''\
-            _ {
+            Components {
+
                 App {
                     Tk {
                         id: root
@@ -43,8 +56,8 @@ class test_load_tkml_file_leafcomps(Spec):
 
                         Canvas {
                             id: viewport
-                            config: yscrollcommand: scrollbar.set
-                            create_window { xy: '0,0' window: 'content' anchor: 'nw' }
+                            config: { yscrollcommand: scrollbar.set }
+                            create_window: { x: 0 y: 0 window: content anchor: 'nw' }
 
                             Frame { 
                                 id: content 
@@ -53,7 +66,7 @@ class test_load_tkml_file_leafcomps(Spec):
 
                         Scrollbar { 
                             id: scrollbar
-                            config: command: viewport.yview
+                            config: { command: viewport.yview }
                         }
                     }
                 }
@@ -77,23 +90,20 @@ class test_load_tkml_file_leafcomps(Spec):
         )
 
 
-class test_tkml_tree_leafcomps(Spec):
+class test_component_hierarchy_COMPONENTS(Spec):
     def setUp(self):
-        path = 'leafcomps.tkml'
-        tkml_string = load_tkml_file(path)
-        node = tkml_tree(tkml_string)
-        self.weird_component_hierarchy = TKMLVisitor().visit(node)
+        path = '../components.tkml'
+        self.tkml_string = load_tkml_file(path)
 
-    def test_returns_component_hierarchy_dict(self):
-        self.maxDiff = None
-        component_hierarchy = rebuild(self.weird_component_hierarchy)
-        self.asrt(isinstance(component_hierarchy, dict))
+    def test_returns_nested_dicts_of_type_props_parts(self):
+        root = component_hierarchy(self.tkml_string)
+        self.asrt(isinstance(root, dict))
         
         # even a simple Scrollable is some incredible structure...
         self.equa(
-            component_hierarchy,
+            root,
             {
-                'type': '_',
+                'type': 'Components',
                 'props': {},
                 'parts': [
         # ---------------------------------------------------------------------
@@ -123,7 +133,8 @@ class test_tkml_tree_leafcomps(Spec):
                                             'id': 'viewport',
                                             'config': {'yscrollcommand': 'scrollbar.set'},
                                             'create_window': {
-                                                'xy': '0,0',
+                                                'x': 0,
+                                                'y': 0,
                                                 'window': 'content',
                                                 'anchor': 'nw'
                                             }
@@ -175,11 +186,11 @@ class test_tkml_tree_leafcomps(Spec):
         )
 
 
-class test_load_tkml_file_leafapp(Spec):
+class test_load_tkml_file_LAYOUT(Spec):
     def setUp(self):
-        self.path = 'leafapp.tkml'
+        self.path = '../layout.tkml'
 
-    def test_returns_string(self):
+    def test_returns_tkml_string_defining_root_component_App(self):
         self.maxDiff = None
         s = load_tkml_file(self.path)
         self.asrt(isinstance(s, str))
@@ -199,21 +210,17 @@ class test_load_tkml_file_leafapp(Spec):
         )
     
 
-class test_tkml_tree_leafapp(Spec):
+class test_component_hierarchy_LAYOUT(Spec):
     def setUp(self):
-        path = 'leafapp.tkml'
-        tkml_string = load_tkml_file(path)
-        node = tkml_tree(tkml_string)
-        self.weird_component_hierarchy = TKMLVisitor().visit(node)
+        path = '../layout.tkml'
+        self.tkml_string = load_tkml_file(path)
 
-    def test_returns_component_hierarchy_dict(self):
-        self.maxDiff = None
-        component_hierarchy = rebuild(self.weird_component_hierarchy)
-        self.asrt(isinstance(component_hierarchy, dict))
+    def test_returns_nested_dicts_of_type_props_parts(self):
+        root = component_hierarchy(self.tkml_string)
+        self.asrt(isinstance(root, dict))
         
-        # even a simple Scrollable is some incredible structure...
         self.equa(
-            component_hierarchy,
+            root,
             {
                 'type': 'App',
                 'props': {'geometry': '400x900', 'title': 'align failure successwise'},
@@ -224,8 +231,8 @@ class test_tkml_tree_leafapp(Spec):
                         'parts': [
                             {
                                 'type': 'Leaf',
-                                'parts': [],
                                 'props': {'id': 'l1'},
+                                'parts': [],
                             }
                         ],
                     }
@@ -234,21 +241,23 @@ class test_tkml_tree_leafapp(Spec):
         )
 
 
-class test_load_toml_file_leafstyle(Spec):
+class test_load_toml_file_STYLE(Spec):
     def setUp(self):
-        self.path = 'leafstyle.toml'
+        self.path = '../style.toml'
 
-    def test_returns_stated_style_hierarchy_dict(self):
-        self.maxDiff = None
-        stated_style_hierarchy = load_toml_file(self.path)
-        self.asrt(isinstance(stated_style_hierarchy, dict))
+    def test_returns_dict_of_component_styles_by_state(self):
+        style_tree_by_state = load_toml_file(self.path)
+        self.asrt(isinstance(style_tree_by_state, dict))
 
         self.equa(
-            stated_style_hierarchy,
+            style_tree_by_state,
             {
                 'Default': {
                     'App': {
-                        'geometry': '400x900', 'title': 'Failure is Inevitable'
+                        'Tk': {
+                            'title': 'Failure is Inconceivable',
+                            'geometry': '400x900',
+                        }
                     },
 
                     'Leaf': {
@@ -265,8 +274,8 @@ class test_load_toml_file_leafstyle(Spec):
 
                             'Text': {
                                 'config': {'height': 1, 'width': 20},
-                                 'grid': {'column': 1, 'row': 0, 'sticky': 'nesw'},
-                                 'text': 'hello'
+                                'grid': {'column': 1, 'row': 0, 'sticky': 'nesw'},
+                                'text': 'hello'
                             },
                         }
                     },
@@ -297,7 +306,37 @@ class test_load_toml_file_leafstyle(Spec):
                 }
             }
         )
-        
+
+
+class test_trivial_layout(Spec):
+    def setUp(self):
+        self.layout = dedent('''
+        Tk { 
+            geometry: "100x100" 
+
+            Frame {
+                config: { relief: "raised" }
+            }
+        }
+        ''')
+        self.style = dedent('''
+        [Default]
+        Tk.geometry = "400x900"
+        Tk.Frame.config = { relief = 'groove' }
+        ''')
+        comps = ''
+        script = ''
+
+    def test_(self):
+        layout_root = component_hierarchy(self.layout)
+        style_root = load_toml_string(self.style)
+
+        state = 'Default'
+        style_node = style_root[state]
+        print(layout_root)
+        print(style_node)
+
+        # print(layout_root)
 
 
 

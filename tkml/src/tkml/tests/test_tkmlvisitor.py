@@ -42,16 +42,13 @@ class test_trivial_tkml_tree_when_walked_for_components(Spec):
     def setUp(self):
         source = 'Name {}'
         self.tree = tkml_tree(source)
-        self.walker = TKMLVisitor()
 
     def test_returns_dict(self):
-        comps = self.walker.visit(self.tree)
-        self.asrt(isinstance(comps, dict))
+        root = TKMLVisitor().visit(self.tree)
+        self.asrt(isinstance(root, dict))
 
-    def test_returns_expected_components(self):
-        comps = self.walker.visit(self.tree)
         self.equa(
-            comps,
+            root,
             {
                 'type': 'Name',
                 'props': {},
@@ -67,12 +64,11 @@ class test_basic_tkml_tree_when_walked_for_components(Spec):
             }
         ''')
         self.tree = tkml_tree(source)
-        self.walker = TKMLVisitor()
 
     def test_returns_expected_component_dict(self):
-        comps = self.walker.visit(self.tree)
+        root = TKMLVisitor().visit(self.tree)
         self.equa(
-            comps,
+            root,
             {
                 'type': 'Block',
                 'props': {'prop_1': 'some string'},
@@ -88,17 +84,16 @@ class test_medium_tkml_tree_when_walked_for_components(Spec):
                 float: 5.29
                 string: "aim for the moon"
                 string2: 'wind up among stars'
-                multi: id: 2001
+                multi: { id: 2001 }
                 color: #123ABC
             }
         ''')
         self.tree = tkml_tree(source)
-        self.walker = TKMLVisitor()
 
     def test_returns_expected_component_dict(self):
-        comps = self.walker.visit(self.tree)
+        root = TKMLVisitor().visit(self.tree)
         self.equa(
-            comps,
+            root,
             {
                 'type': 'Block',
                 'props': {
@@ -121,18 +116,17 @@ class test_example_tkml_tree_when_walked_for_components(Spec):
                 number: 31
                 float: 23.529
                 color: #AA1122
-                nested_block { v: #123ABC  q: 1000}
-                nested_prop: v: #123456
+                nested_block { v: #123ABC q: 1000}
+                nested_prop: { v: #123456 }
                 0: "digit identifier"
             }
         ''')
         self.tree = tkml_tree(source)
-        self.walker = TKMLVisitor()
 
     def test_returns_expected_component_dict(self):
-        comps = self.walker.visit(self.tree)
+        root = TKMLVisitor().visit(self.tree)
         self.equa(
-            comps,
+            root,
             {
                 'type': 'Block',
                 'props': 
@@ -157,6 +151,88 @@ class test_example_tkml_tree_when_walked_for_components(Spec):
             }
         )
         
+
+class test_full_rebuild_on_nontrivial_source(Spec):
+    def setUp(self):
+        source = dedent('''
+        App {
+            script: 'app.py'
+            style: 'app.toml'
+            comps: 'app.tkml'
+
+            Scrollable {
+                Frame {
+                    id: container
+
+                    Canvas {
+                        id: viewport
+                        config: { yscrollcommand: 'scrollbar.set' }
+
+                        Frame { 
+                            id: content 
+                        }
+                    }
+
+                    Scrollbar { 
+                        id: scrollbar
+                        config: { command: 'viewport.yview' }
+                    }
+                }
+            }
+        }
+        ''')
+        self.tree = tkml_tree(source)
+
+    def test_achieves_expected_value(self):
+        root = TKMLVisitor().visit(self.tree)
+
+        self.equa(
+            root,
+            {
+                'type': 'App',
+                'props': {
+                    'script': 'app.py', 'style': 'app.toml', 'comps': 'app.tkml'
+                },
+                'parts': [
+                    {
+                        'type': 'Scrollable',
+                        'props': {},
+                        'parts': [
+                            {
+                                'type': 'Frame',
+                                'props': {'id': 'container'},
+                                'parts': [
+                                    {
+                                        'type': 'Canvas',
+                                        'props': {
+                                            'id': 'viewport',
+                                            'config': {
+                                                'yscrollcommand': 'scrollbar.set'
+                                            }
+                                        },
+                                        'parts': [
+                                            {
+                                                'type': 'Frame',
+                                                'props': {'id': 'content'},
+                                                'parts': []}
+                                        ]
+                                    },
+                                    {
+                                        'type': 'Scrollbar',
+                                        'props': {
+                                            'id': 'scrollbar',
+                                            'config': {'command': 'viewport.yview'}
+                                        },
+                                        'parts': []
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            }
+        )
+
 
 if __name__ == '__main__':
     main(testRunner=Runner)

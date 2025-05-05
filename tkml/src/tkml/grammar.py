@@ -7,20 +7,33 @@ from parsimonious.exceptions import ParseError
 
 # TODO: analyze for associativity problems
 # TODO: encompass unicode?
-
-# order matters -> (x / y / z) will disambiguate by first match
 TKML_GRAMMAR = r'''
-tkml        = ws block ws
-block       = identifier ws "{" ws item* ws "}"
-item        = (property / block) ws
-property    = identifier ws ":" ws (property / value)
-value       = number / color / identifier / string
-string      = ~r'"([^\n"\\]|(\\[^\\]))*"' / ~r"'([^\n'\\]|(\\[^\\]))*'"
-identifier  = ~r"[a-zA-Z0-9_]+(\.[a-zA-Z0-9_]+)*" 
-color       = ~"#[a-zA-Z0-9]{6}"
-number      = ~r"[0-9]+(\.[0-9]+)*"
-ws          = ~"\\s*"
+tkml            = ws block ws
+block           = identifier ws "{" ws item* ws "}"
+item            = (prop / block) ws
+prop            = identifier ws ":" ws (nested_props / value) ws
+nested_props    = "{" ws inner_prop* ws "}"
+inner_prop      = identifier ws ":" ws value ws
+value           = string / color / number / identifier
+string          = ~r'"([^\n"\\]|(\\[^\\]))*"' / ~r"'([^\n'\\]|(\\[^\\]))*'"
+color           = ~"#[a-zA-Z0-9]{6}"
+number          = ~r"[0-9]+(\.[0-9]+)?"
+identifier      = ~r"[a-zA-Z0-9_]+(\.[a-zA-Z0-9_]+)*" 
+ws              = ~"\\s*"
 '''
+# order matters -> (x / y / z) will disambiguate by first match
+# TKML_GRAMMAR = r'''
+# tkml        = ws block ws
+# block       = identifier ws "{" ws item* ws "}"
+# item        = (property / block) ws
+# property    = identifier ws ":" ws (property / value)
+# value       = number / color / identifier / string
+# string      = ~r'"([^\n"\\]|(\\[^\\]))*"' / ~r"'([^\n'\\]|(\\[^\\]))*'"
+# identifier  = ~r"[a-zA-Z0-9_]+(\.[a-zA-Z0-9_]+)*" 
+# color       = ~"#[a-zA-Z0-9]{6}"
+# number      = ~r"[0-9]+(\.[0-9]+)*"
+# ws          = ~"\\s*"
+# '''
 
 EXAMPLE_SOURCE = '''
 Block {
@@ -28,9 +41,9 @@ Block {
     number: 31
     float: 23.529
     color: #AA1122
-    nested_block { v: #123ABC  q: 1000}
-    nested_prop: v: #123456
+    nested_block: { v: #123ABC  q: 1000}
     0: "digit identifier"
+    one.two: "dotted identifer"
 }
 '''
 

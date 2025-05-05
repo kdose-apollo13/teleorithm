@@ -1,6 +1,6 @@
 [Default.App]
-title = 'Failure is Inevitable'
-geometry = '400x900'
+Tk.title = 'Failure is Inconceivable'
+Tk.geometry = '400x900'
 
 
 [Default.Scrollable]

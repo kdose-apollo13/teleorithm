@@ -73,8 +73,6 @@ class test_overwrite_S_with_T_where_values_dict(Spec):
         S = {'a': {         'bb': 2}, 'b': {         'dd': 4}}
         T = {'a': {'aa': 5, 'bb': 6}, 'b': {'cc': 7,        }}
         r = overwrite_dict(S, T)
-        print(S)
-        print(T)
         self.equa(
             r,
             {'a': {'aa': 5, 'bb': 6}, 'b': {'cc': 7, 'dd': 4}}

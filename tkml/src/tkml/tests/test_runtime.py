@@ -18,6 +18,55 @@ from tkml.utils import (
 )
 
 
+types_and_methods = {
+    'Tk': ['title', 'geometry'],
+    'Frame': ['config'],
+}
+
+
+def merge_by_overwriting(style, layout):
+    """
+        style
+            : dict
+
+        layout
+            : dict
+        
+        modifies
+            ~ layout
+    """
+    new = overwrite_dict(style['props'], layout['props'])
+    # new = overwrite_dict(layout['props'], style['props'])
+    layout['props'] = new
+    for part in layout['parts']:
+        part_style = [p for p in style['parts'] if p['type'] == part['type']][0]
+        merge_by_overwriting(part_style, part)
+
+
+def component_from_style(style_node):
+    """
+        style_node
+            : dict
+
+        returns
+            > dict
+    """
+    new = {'type': '', 'props': {}, 'parts': []}
+
+    for key, value in style_node.items():
+        if key in types_and_methods:
+            new['type'] = key
+            for k, v in value.items():
+                if k in types_and_methods:
+                    new['parts'].append(component_from_style({k: v}))
+                else:
+                    new['props'].update({k: v})
+        else:
+            new['props'].update({key: value})
+            
+    return new
+
+
 def component_hierarchy(tkml):
     """
         tkml
@@ -308,7 +357,7 @@ class test_load_toml_file_STYLE(Spec):
         )
 
 
-class test_trivial_layout(Spec):
+class test_trivial_layout_identical_inline_and_style(Spec):
     def setUp(self):
         self.layout = dedent('''
         Tk { 
@@ -327,16 +376,113 @@ class test_trivial_layout(Spec):
         comps = ''
         script = ''
 
-    def test_(self):
-        layout_root = component_hierarchy(self.layout)
+    def test_inline_takes_precedence_over_style(self):
+        layout_component_tree = component_hierarchy(self.layout)
         style_root = load_toml_string(self.style)
-
+        
         state = 'Default'
         style_node = style_root[state]
-        print(layout_root)
-        print(style_node)
 
-        # print(layout_root)
+        style_component_tree = component_from_style(style_node)
+
+        merge_by_overwriting(style_component_tree, layout_component_tree)
+        self.equa(
+            layout_component_tree,
+            {
+                'type': 'Tk',
+                'props': {'geometry': '100x100'},
+                'parts': [
+                    {
+                        'type': 'Frame',
+                        'props': {'config': {'relief': 'raised'}},
+                        'parts': [],
+                    }
+                ],
+            }
+        )
+
+
+class test_trivial_layout_no_geometry_inline_prop(Spec):
+    def setUp(self):
+        self.layout = dedent('''
+        Tk { 
+            Frame {
+                config: { relief: "raised" }
+            }
+        }
+        ''')
+        self.style = dedent('''
+        [Default]
+        Tk.geometry = "400x900"
+        Tk.Frame.config = { relief = 'groove' }
+        ''')
+        comps = ''
+        script = ''
+
+    def test_style_overrides_absent_geometry_prop(self):
+        layout_component_tree = component_hierarchy(self.layout)
+        style_root = load_toml_string(self.style)
+        
+        state = 'Default'
+        style_node = style_root[state]
+
+        style_component_tree = component_from_style(style_node)
+
+        merge_by_overwriting(style_component_tree, layout_component_tree)
+        self.equa(
+            layout_component_tree,
+            {
+                'type': 'Tk',
+                'props': {'geometry': '400x900'},
+                'parts': [
+                    {
+                        'type': 'Frame',
+                        'props': {'config': {'relief': 'raised'}},
+                        'parts': [],
+                    }
+                ],
+            }
+        )
+
+class test_trivial_layout_no_Frame_config_nested_inline_prop(Spec):
+    def setUp(self):
+        self.layout = dedent('''
+        Tk { 
+            Frame {}
+        }
+        ''')
+        self.style = dedent('''
+        [Default]
+        Tk.geometry = "400x900"
+        Tk.Frame.config = { relief = 'groove' }
+        ''')
+        comps = ''
+        script = ''
+
+    def test_style_overrides_absent_inline_prop(self):
+        layout_component_tree = component_hierarchy(self.layout)
+        style_root = load_toml_string(self.style)
+        
+        state = 'Default'
+        style_node = style_root[state]
+
+        style_component_tree = component_from_style(style_node)
+
+        merge_by_overwriting(style_component_tree, layout_component_tree)
+        self.equa(
+            layout_component_tree,
+            {
+                'type': 'Tk',
+                'props': {'geometry': '400x900'},
+                'parts': [
+                    {
+                        'type': 'Frame',
+                        'props': {'config': {'relief': 'groove'}},
+                        'parts': [],
+                    }
+                ],
+            }
+        )
 
 
 

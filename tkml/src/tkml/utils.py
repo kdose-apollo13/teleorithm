@@ -149,6 +149,31 @@ def overwrite_dict(d, e):
     return new
             
 
+def merge_dicts(a, b):
+    """
+    Return new dict merging a and b deeply.
+    Values in b overwrite those in a.
+    Neither a nor b is mutated.
+    """
+    result = {}
+    for key in set(a) | set(b):
+        in_a = key in a
+        in_b = key in b
+        if in_a and in_b:
+            va, vb = a[key], b[key]
+            # recurse if both dicts
+            if isinstance(va, dict) and isinstance(vb, dict):
+                result[key] = merge_dicts(va, vb)
+            else:
+                result[key] = vb
+        elif in_b:
+            vb = b[key]
+            result[key] = merge_dicts({}, vb) if isinstance(vb, dict) else vb
+        else:
+            va = a[key]
+            result[key] = merge_dicts({}, va) if isinstance(va, dict) else va
+    return result
+
 
 if __name__ == '__main__':
     

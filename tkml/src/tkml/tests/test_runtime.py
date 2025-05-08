@@ -14,7 +14,7 @@ from tkml.grammar import tkml_tree
 from tkml.tkmlvisitor import TKMLVisitor
 from tkml.errors import TkmlError
 from tkml.utils import (
-    load_tkml_file, load_toml_file, key_and_value, load_toml_string, overwrite_dict
+    load_tkml_file, load_toml_file, load_toml_string, key_and_value, merge_dicts
 )
 
 
@@ -23,26 +23,36 @@ types_and_methods = {
     'Frame': ['config'],
 }
 
-
-def merge_by_overwriting(style, layout):
+def merge_style_into_layout(style, layout):
     """
         style
             : dict
-            : { type: '', props: {}, parts: []}
 
         layout
             : dict
-            : { type: '', props: {}, parts: []}
-        
-        modifies
-            ~ layout
+
+        returns
+            > dict
     """
-    new = overwrite_dict(style['props'], layout['props'])
-    layout['props'] = new
-    for sublayout in layout['parts']:
-        for substyle in style['parts']:
-            if substyle['type'] == sublayout['type']:
-                merge_by_overwriting(substyle, sublayout)
+    merged = {
+        'type': layout['type'],
+        'props': merge_dicts(style.get('props', {}), layout.get('props', {})),
+        'parts': []
+    }
+
+    style_map = {}
+    for part in style.get('parts', []):
+        if isinstance(part, dict) and 'type' in part:
+            style_map.update({part['type']: part})
+
+    for part in layout.get('parts', []):
+        if isinstance(part, dict) and 'type' in part:
+            sty = style_map.get(part['type'], {})
+            merged['parts'].append(merge_style_into_layout(sty, part))
+        else:
+            merged['parts'].append(part)
+
+    return merged
 
 
 def component_from_style(style_node):
@@ -381,10 +391,11 @@ class test_trivial_layout_identical_inline_and_style(Spec):
         styles = load_toml_string(self.style)
         style = styles.get('Default', {})
         style_component_tree = component_from_style(style)
-        merge_by_overwriting(style_component_tree, layout_component_tree)
+
+        final = merge_style_into_layout(style_component_tree, layout_component_tree)
 
         self.equa(
-            layout_component_tree,
+            final,
             {
                 'type': 'Tk',
                 'props': {'geometry': '100x100'},
@@ -421,10 +432,11 @@ class test_trivial_layout_no_geometry_inline_prop(Spec):
         styles = load_toml_string(self.style)
         style = styles.get('Default', {})
         style_component_tree = component_from_style(style)
-        merge_by_overwriting(style_component_tree, layout_component_tree)
+        # merge_by_overwriting(style_component_tree, layout_component_tree)
+        final = merge_style_into_layout(style_component_tree, layout_component_tree)
 
         self.equa(
-            layout_component_tree,
+            final,
             {
                 'type': 'Tk',
                 'props': {'geometry': '400x900'},
@@ -456,10 +468,11 @@ class test_trivial_layout_no_Frame_config_nested_inline_prop(Spec):
         styles = load_toml_string(self.style)
         style = styles.get('Default', {})
         style_component_tree = component_from_style(style)
-        merge_by_overwriting(style_component_tree, layout_component_tree)
+        # merge_by_overwriting(style_component_tree, layout_component_tree)
+        final = merge_style_into_layout(style_component_tree, layout_component_tree)
 
         self.equa(
-            layout_component_tree,
+            final,
             {
                 'type': 'Tk',
                 'props': {'geometry': '400x900'},
@@ -493,10 +506,10 @@ class test_trivial_layout_no_style(Spec):
         styles = load_toml_string(self.style)
         style = styles.get('Default', {})
         style_component_tree = component_from_style(style)
-        merge_by_overwriting(style_component_tree, layout_component_tree)
+        final = merge_style_into_layout(style_component_tree, layout_component_tree)
 
         self.equa(
-            layout_component_tree,
+            final,
             {
                 'type': 'Tk',
                 'props': {'geometry': '100x100'},
@@ -510,6 +523,52 @@ class test_trivial_layout_no_style(Spec):
             }
         )
 
+
+class test_trivial_layout_multiple_parts_same_type(Spec):
+    def setUp(self):
+        self.layout = dedent('''
+            Tk { 
+                geometry: "100x100" 
+
+                Frame {
+                    config: { relief: "raised" }
+                }
+
+                Frame {
+                    config: { relief: "flat" }
+                }
+
+            }
+        ''')
+        self.style = dedent('''
+        ''')
+
+    def test_inline_works_as_expected(self):
+        layout_component_tree = component_hierarchy(self.layout)
+        styles = load_toml_string(self.style)
+        style = styles.get('Default', {})
+        style_component_tree = component_from_style(style)
+        final = merge_style_into_layout(style_component_tree, layout_component_tree)
+
+        self.equa(
+            final,
+            {
+                'type': 'Tk',
+                'props': {'geometry': '100x100'},
+                'parts': [
+                    {
+                        'type': 'Frame',
+                        'props': {'config': {'relief': 'raised'}},
+                        'parts': [],
+                    },
+                    {
+                        'type': 'Frame',
+                        'props': {'config': {'relief': 'flat'}},
+                        'parts': [],
+                    }
+                ],
+            }
+        )
 
 if __name__ == '__main__':
     main(testRunner=Runner)

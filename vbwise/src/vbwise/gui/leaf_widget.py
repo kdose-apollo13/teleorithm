@@ -2,265 +2,193 @@
 
 import tkinter as tk
 import tkinter.scrolledtext as scrolledtext
-# Assume Node is available via import
-from vbwise.node import Node
-# Assume AppState is available (though LeafWidget mostly just needs Node and state info passed in)
-# from vbwise.app_state import AppState # Not strictly needed if state info is passed
+# from tkinter.font import Font # Not explicitly used
+import re
+import sys
 
+from vbwise.node import Node
+from vbwise.app_state import AppState
+
+# --- Theme/Color Definitions ---
+DARK_BG_DEFAULT = '#2b2b2b'
+DARK_FG_DEFAULT = '#a9b7c6'
+DARK_BG_FOCUSED = '#3c3f41'
+DARK_BG_SELECTED = '#614b4b'
+DARK_BORDER_COLOR = '#616161' # Used for default highlight if any
+FOCUS_HIGHLIGHT_COLOR = '#78C7F0' # A distinct color for focus highlight border
+SELECTION_HIGHLIGHT_COLOR = '#C778F0' # A distinct color for selection highlight border
+
+COLOR_TXT = DARK_FG_DEFAULT
+COLOR_L1 = '#6a8759'
+COLOR_L2 = '#cc7832'
+COLOR_L3 = '#a9b7c6'
+COLOR_CODE_KEYWORD = '#cc7832'
+COLOR_CODE_STRING = '#6a8759'
+COLOR_CODE_COMMENT = '#808080'
+
+SYNTAX_PATTERNS = [
+    (re.compile(r'\b(False|None|True|and|as|assert|async|await|break|class|continue|def|del|elif|else|except|finally|for|from|global|if|import|in|is|lambda|nonlocal|not|or|pass|raise|return|try|while|with|yield)\b'), 'code_keyword'),
+    (re.compile(r'".*?"|\'.*?\''), 'code_string'),
+    (re.compile(r'#.*$'), 'code_comment'),
+]
 
 class LeafWidget(tk.Frame):
-    """A Tkinter widget to display the content of a single Node."""
-    def __init__(self, parent, app_state, node_id, **kwargs):
-        # Inherit from tk.Frame. We'll use this frame to contain the node's content.
-        super().__init__(parent, bd=2, relief=tk.GROOVE, **kwargs) # Add a border to see leaf boundaries
+    """
+    Displays a single Node, reacting to AppState changes for content and visuals.
+    """
+    def __init__(self, parent: tk.Widget, app_state: AppState, node_id: str, **kwargs):
+        super().__init__(parent, bd=0, relief=tk.FLAT, bg=DARK_BG_DEFAULT, **kwargs) # bd=0 on frame itself
 
-        self.app_state = app_state # Keep a reference to AppState to query state
-        self.node_id = node_id     # Store the ID of the node this widget represents
+        if not isinstance(app_state, AppState):
+            raise TypeError("app_state must be an instance of AppState.")
+        self.app_state = app_state
+        self.node_id = node_id
 
-        # --- Internal Widgets to display Node content ---
-        # We'll use a ScrolledText for the main content area for simplicity initially.
-        # Later, we might replace this with more complex rendering logic for different content types.
-
-        # Use a Label for the title/header
-        self.header_label = tk.Label(self, anchor=tk.W, font=('TkDefaultFont', 10, 'bold'))
-        self.header_label.pack(side=tk.TOP, fill=tk.X, padx=5, pady=2)
+        # Configure overall frame border/highlight properties (will be changed by set_focused/selected)
+        self.config(highlightthickness=2, highlightbackground=DARK_BORDER_COLOR, relief=tk.SOLID)
 
 
-        self.content_display = scrolledtext.ScrolledText(self, wrap=tk.WORD, state=tk.DISABLED, font=('TkDefaultFont', 9))
+        self.header_label = tk.Label(
+            self, anchor=tk.W, font=('TkDefaultFont', 10, 'bold'),
+            bg=DARK_BG_DEFAULT, fg=DARK_FG_DEFAULT
+        )
+        self.header_label.pack(side=tk.TOP, fill=tk.X, padx=5, pady=(2,0))
+
+        self.content_display = scrolledtext.ScrolledText(
+            self, wrap=tk.WORD, state=tk.DISABLED, font=('TkDefaultFont', 9),
+            bg=DARK_BG_DEFAULT, fg=DARK_FG_DEFAULT,
+            insertbackground=DARK_FG_DEFAULT,
+            relief=tk.FLAT, bd=0 
+        )
         self.content_display.pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=5, pady=5)
+        
+        # Explicitly set the background of the internal Text widget
+        # This can sometimes be necessary if the ScrolledText wrapper doesn't fully propagate bg
+        try:
+            self.content_display.text.config(bg=DARK_BG_DEFAULT)
+        except AttributeError: # Should not happen with standard ScrolledText
+            pass
 
-        # --- State Variables for Visuals ---
+
+        self._define_text_tags()
+
         self._is_focused = False
         self._is_selected = False
 
-        # --- Event Bindings ---
-        # Bind clicks on the LeafWidget (or its content) to update focus/selection
-        # Binding to <Button-1> on self (the frame) will capture clicks
-        # Binding to the content_display might also be needed if clicks on text should focus
         self.bind("<Button-1>", self._on_click)
         self.header_label.bind("<Button-1>", self._on_click)
         self.content_display.bind("<Button-1>", self._on_click)
+        if hasattr(self.content_display, 'vbar'):
+            self.content_display.vbar.bind("<Button-1>", self._on_click)
 
+        self._apply_visual_style() # Apply initial style
 
-        # Initial display update will be called after creation in MainWindow
+    def _define_text_tags(self) -> None:
+        text_widget = self.content_display
+        text_widget.tag_configure('txt', foreground=COLOR_TXT)
+        text_widget.tag_configure('level', font=('TkDefaultFont', 9, 'italic'))
+        text_widget.tag_configure('l1', foreground=COLOR_L1)
+        text_widget.tag_configure('l2', foreground=COLOR_L2)
+        text_widget.tag_configure('l3', foreground=COLOR_L3)
+        text_widget.tag_configure('code', font=('Courier New', 9)) # BG handled by widget
+        text_widget.tag_configure('code_keyword', foreground=COLOR_CODE_KEYWORD)
+        text_widget.tag_configure('code_string', foreground=COLOR_CODE_STRING)
+        text_widget.tag_configure('code_comment', foreground=COLOR_CODE_COMMENT, font=('Courier New', 9, 'italic'))
 
+    def _on_click(self, event: tk.Event) -> None:
+        if self.app_state.focused_leaf_id != self.node_id:
+            self.app_state.focused_leaf_id = self.node_id
 
-    def _on_click(self, event):
-        """Handles a click event on the leaf widget."""
-        print(f"LeafWidget '{self.node_id}' clicked.")
-        # Inform the AppState that this node should be focused
-        # The AppState will handle setting focus and notifying observers
-        self.app_state.execute_command(f"goto {self.node_id}") # Using goto command to set focus and display
-
-        # Also handle selection - maybe Ctrl+Click or Shift+Click for selection?
-        # For now, a simple click sets focus via goto. Let's add simple selection toggle on click.
-        # A single click could just set focus, maybe a right-click or key combo for selection?
-        # Let's stick to single click setting focus (via goto) for now. Selection logic needs more thought on interaction.
-
-        # If we want single click to SET focus, we need to tell AppState
-        # Let's add a specific command/method for setting focus without necessarily changing displayed leaves?
-        # Or does 'goto' always mean display AND focus? For now, yes.
-        # Let's make a separate focus command for clarity later if needed.
-        # For now, clicking a leaf essentially says "make this the current leaf".
-
-        # A more direct way to set focus without 'goto' changing displayed leaves:
-        # self.app_state.set_focused_leaf(self.node_id)
-        # self.app_state._notify_observers(event_type="focused_leaf_changed", node_id=self.node_id) # Manually notify
-
-        # Let's modify AppState slightly to have a `set_focus_and_select` method or similar,
-        # or just use individual AppState methods directly here if execute_command is too heavy for clicks.
-        # Let's use direct AppState methods for click handlers for responsiveness.
-
-        # Directly update AppState for click:
-        self.app_state.set_focused_leaf(self.node_id) # Set focus
-        # Simple click toggles selection? No, let's keep selection separate.
-        # Maybe right click selects? Or a modifier key + click?
-        # For now, click only sets focus.
-
-        # If you want click to also set displayed leaves (like `goto`):
-        # self.app_state.set_displayed_leaves([self.node_id])
-        # self.app_state.set_focused_leaf(self.node_id)
-        # The on_state_changed observer will handle the update.
-
-        # Let's make single click SET FOCUS ONLY initially. This requires `on_state_changed`
-        # to handle the visual update for focused state without changing layout/displayed leaves.
-        # This is simpler and aligns better with a multi-leaf layout where clicking just changes active leaf.
-        pass # Keep the _on_click logic simple: it will call set_focused_leaf and notify observers.
-
-
-    def update_display(self):
-        """Updates the content and appearance of the LeafWidget based on AppState."""
+    def update_display(self) -> None:
         node = self.app_state.get_node_by_id(self.node_id)
         if not node:
-            # Handle case where node is somehow missing
-            self.header_label.config(text=f"Error: Node '{self.node_id}' not found")
+            self.header_label.config(text=f"Error: Node '{self.node_id}' not found", bg='red', fg='white')
             self.content_display.config(state=tk.NORMAL)
             self.content_display.delete(1.0, tk.END)
-            self.content_display.insert(tk.END, "Node data could not be loaded.")
+            self.content_display.insert(tk.END, "Node data could not be loaded.", 'txt')
             self.content_display.config(state=tk.DISABLED)
-            print(f"Error: LeafWidget cannot find node data for ID: {self.node_id}", file=sys.stderr)
             return
 
-        # Get effective detail level for this specific leaf
         effective_detail = self.app_state.get_effective_detail_level(self.node_id)
-        print(f"Updating display for node '{self.node_id}' with effective detail {effective_detail}")
-
-        # --- Update Header ---
         header_text = node.id
         if node.title:
-             header_text += f" - {node.title}"
-        # Add visual indicator for override if needed
+            header_text += f" - {node.title}"
         if self.node_id in self.app_state.leaf_detail_overrides:
             header_text += f" (Detail Override: {self.app_state.leaf_detail_overrides[self.node_id]})"
-
         self.header_label.config(text=header_text)
 
-        # --- Update Content ---
-        displayable_lines = node.get_content_for_display(effective_detail)
-
-        self.content_display.config(state=tk.NORMAL) # Enable editing temporarily
-        self.content_display.delete(1.0, tk.END)     # Delete all current text
-
-        # Insert content lines
-        for line in displayable_lines:
-            self.content_display.insert(tk.END, line + "\n")
-
-        self.content_display.config(state=tk.DISABLED) # Disable editing again
-
-
-        # --- Update Visual State (Focus/Selection) ---
-        self.set_focused(self.node_id == self.app_state.get_focused_leaf_id())
-        self.set_selected(self.node_id in self.app_state.selected_leaf_ids)
-
-
-    def set_focused(self, is_focused: bool):
-        """Visually indicates if the leaf has focus."""
-        if self._is_focused != is_focused:
-            self._is_focused = is_focused
-            print(f"LeafWidget '{self.node_id}': is_focused = {is_focused}")
-            if self._is_focused:
-                self.config(relief=tk.SOLID, bd=2) # Bold border for focus
-                # Optionally set background color for header/content
-                # self.header_label.config(bg='lightblue')
-            else:
-                self.config(relief=tk.GROOVE, bd=2) # Normal border
-                # self.header_label.config(bg=self.cget('bg')) # Reset background
-
-    def set_selected(self, is_selected: bool):
-        """Visually indicates if the leaf is selected."""
-        if self._is_selected != is_selected:
-            self._is_selected = is_selected
-            print(f"LeafWidget '{self.node_id}': is_selected = {is_selected}")
-            # Selection visual could be different from focus
-            # Example: change background color of the frame slightly, or change relief
-            if self._is_selected:
-                 # Ensure focus visual overrides selection visual if both are true
-                 if not self._is_focused:
-                      self.config(relief=tk.RIDGE, bd=2) # Different border for selected
-                     # self.header_label.config(bg='lightyellow') # Example selection highlight
-            else:
-                 # Only change relief/bg if it's not currently focused
-                 if not self._is_focused:
-                     self.config(relief=tk.GROOVE, bd=2) # Reset to normal if not focused
-                     # self.header_label.config(bg=self.cget('bg'))
-
-    # TODO: Add methods for editing content later
-    # TODO: Add binding for right-click for context menu or selection
-    # TODO: Add binding for keyboard navigation within the leaf (like vim j/k) - complex!
+        self.content_display.config(state=tk.NORMAL)
+        self.content_display.delete(1.0, tk.END)
+        for prefix, line_text in node.content_lines:
+            display_line = False
+            if prefix == 'TXT': display_line = True
+            elif prefix == 'CODE':
+                if effective_detail >= 2: display_line = True
+            elif prefix.startswith('L'):
+                try:
+                    if effective_detail >= int(prefix[1:]): display_line = True
+                except ValueError: pass
+            if display_line:
+                tags = (prefix.lower(),) + (('level',) if prefix.startswith('L') else ())
+                self.content_display.insert(tk.END, line_text + "\n", tags)
+                if prefix == 'CODE':
+                    self._apply_syntax_highlighting_to_last_line(line_text)
+        self.content_display.config(state=tk.DISABLED)
+        
+        # After content update, ensure the background of text area is correct
+        # based on current focus/selection state (which _apply_visual_style reads)
+        self._apply_visual_style()
 
 
-# Example Usage (for testing the widget in isolation)
-if __name__ == "__main__":
-    # This part requires a dummy AppState and Node
-    class DummyAppState:
-        def __init__(self):
-            self.all_nodes = {
-                "test_node_1": Node(
-                    id="test_node_1",
-                    title="Dummy Node 1",
-                    content_lines=[("L1", "Line 1"), ("L2", "Line 2"), ("TXT", "Some text")]
-                ),
-                 "test_node_2": Node(
-                    id="test_node_2",
-                    title="Dummy Node 2",
-                    content_lines=[("L1", "Another L1"), ("CODE", "print('hello')"), ("L3", "More detail")]
-                ),
-            }
-            self.detail_level = 1
-            self.leaf_detail_overrides = {"test_node_2": 3} # Override for node 2
-            self.focused_leaf_id = "test_node_1"
-            self.selected_leaf_ids = {"test_node_1"}
+    def _apply_syntax_highlighting_to_last_line(self, line_text: str) -> None:
+        text_widget = self.content_display
+        line_start_index = text_widget.index("end-1c linestart")
+        for pattern, tag_name in SYNTAX_PATTERNS:
+            for match in pattern.finditer(line_text):
+                start, end = match.span()
+                widget_match_start = f"{line_start_index}+{start}c"
+                widget_match_end = f"{line_start_index}+{end}c"
+                text_widget.tag_add(tag_name, widget_match_start, widget_match_end)
 
-        def get_node_by_id(self, node_id):
-            return self.all_nodes.get(node_id)
+    def _apply_visual_style(self) -> None:
+        """Applies background and border styles based on focus and selection state."""
+        bg_color = DARK_BG_DEFAULT
+        highlight_color = DARK_BORDER_COLOR # Default highlight border color
+        # relief_style = tk.SOLID # Default relief for the main frame border
+        
+        # The main frame itself will have a highlightthickness of 2 (set in __init__)
+        # We just change its highlightbackground color.
+        # The bd=0 and relief=tk.FLAT on the Frame itself means its own border is not visible,
+        # only the highlight border.
 
-        def get_effective_detail_level(self, node_id):
-            return self.leaf_detail_overrides.get(node_id, self.detail_level)
+        if self._is_focused:
+            bg_color = DARK_BG_FOCUSED
+            highlight_color = FOCUS_HIGHLIGHT_COLOR
+        elif self._is_selected:
+            bg_color = DARK_BG_SELECTED
+            highlight_color = SELECTION_HIGHLIGHT_COLOR
+        
+        # Apply to the main LeafWidget Frame
+        self.config(bg=bg_color, highlightbackground=highlight_color) # Frame bg, and its highlight border color
 
-        def get_focused_leaf_id(self):
-            return self.focused_leaf_id
+        # Apply to children
+        self.header_label.config(bg=bg_color)
+        self.content_display.config(bg=bg_color)
+        try: # Explicitly set bg for the internal Text widget of ScrolledText
+            self.content_display.text.config(bg=bg_color)
+        except AttributeError:
+            pass # Should not happen with standard ScrolledText
 
-        def get_selected_leaf_ids(self):
-            return self.selected_leaf_ids
+    def set_focused(self, is_focused: bool) -> None:
+        if self._is_focused == is_focused:
+            return
+        self._is_focused = is_focused
+        self._apply_visual_style()
 
-        # Need dummy methods that the click handler might call
-        def set_focused_leaf(self, node_id):
-             print(f"DummyAppState: Set focused leaf to {node_id}")
-             self.focused_leaf_id = node_id
-             # In real AppState, this would notify observers
-             # self._notify_observers(event_type="focused_leaf_changed", node_id=node_id)
-             # For isolated test, manually update visuals (or run a dummy mainloop)
-             # This highlights why the observer pattern is needed - state changes automatically trigger GUI update
+    def set_selected(self, is_selected: bool) -> None:
+        if self._is_selected == is_selected:
+            return
+        self._is_selected = is_selected
+        self._apply_visual_style()
 
-        # Need dummy execute_command if _on_click uses it
-        def execute_command(self, command_string):
-             print(f"DummyAppState: Executing command: {command_string}")
-             if command_string.startswith("goto "):
-                  node_id = command_string.split()[-1]
-                  self.set_focused_leaf(node_id) # Simulate goto effect on focus
-
-
-    root = tk.Tk()
-    root.title("LeafWidget Test")
-
-    dummy_app_state = DummyAppState()
-
-    # Create some leaf widgets
-    leaf1 = LeafWidget(root, app_state=dummy_app_state, node_id="test_node_1")
-    leaf1.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5, pady=5) # Use pack for test
-
-    leaf2 = LeafWidget(root, app_state=dummy_app_state, node_id="test_node_2")
-    leaf2.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5, pady=5) # Use pack for test
-
-    # Manually update display for test (real app uses observer)
-    leaf1.update_display()
-    leaf2.update_display()
-
-
-    # Simulate state changes and manually update widgets
-    def simulate_focus_change():
-         print("\nSimulating focus change to node 2")
-         dummy_app_state.set_focused_leaf("test_node_2")
-         leaf1.set_focused(False) # Manually update leaf 1
-         leaf2.set_focused(True)  # Manually update leaf 2
-
-    def simulate_selection_change():
-         print("\nSimulating selection change: node 2 selected, node 1 deselected")
-         dummy_app_state.selected_leaf_ids = {"test_node_2"}
-         leaf1.set_selected(False)
-         leaf2.set_selected(True)
-
-    def simulate_detail_change():
-         print("\nSimulating global detail change to 3")
-         dummy_app_state.detail_level = 3
-         # Need to manually call update_display on affected leaves
-         leaf1.update_display() # Node 1 will use new global level
-         leaf2.update_display() # Node 2 will still use override (level 3)
-
-    tk.Button(root, text="Simulate Focus Node 2", command=simulate_focus_change).pack(side=tk.BOTTOM)
-    tk.Button(root, text="Simulate Selection Node 2", command=simulate_selection_change).pack(side=tk.BOTTOM)
-    tk.Button(root, text="Simulate Detail Level 3", command=simulate_detail_change).pack(side=tk.BOTTOM)
-
-
-    root.mainloop()
 

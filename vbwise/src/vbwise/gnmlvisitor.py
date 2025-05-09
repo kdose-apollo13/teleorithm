@@ -1,17 +1,21 @@
 """
     | teleorithm |
 
-    GNML - one grammar wasn't enough
+    in grammar, ( x / y ) induces a list
+    that is why [0] in some visit methods
 """
 from parsimonious.nodes import NodeVisitor
 from parsimonious.exceptions import VisitationError
 
-from vbwise.grammar import gnml_tree
+from vbwise.gnmlgrammar import gnml_tree, EXAMPLE_SOURCE as gnml_source
 
 
 class GNMLVisitor(NodeVisitor):
-
-    def visit_file(self, node, visited):
+    """
+        knows how to walk gnml tree and extract nodes
+        method -> .visit(Node)
+    """
+    def visit_gnml(self, node, visited):
         nodes = []
         if len(visited) > 1 and visited[1]:
             for node_def_result, _ in visited[1]:
@@ -160,34 +164,7 @@ class GNMLVisitor(NodeVisitor):
 
 
 if __name__ == '__main__':
-    source = r'''
-### NODE
---- id: way.1
---- meta: a=1, b=2
---- tags: good, yeop
-T1> basic text
-T2> hidden text
-T3> superlatent
-C1> # same but with code
---- prev: way.0
---- next: way.2
-### ENDNODE
-
-### NODE
---- id: example_node_2
---- meta: status= wip, priority=medium
---- tags: example, advanced
---- prev: example_node_1
-T1> This node shows more features, like metadata and multiple tags.
-T1> It is linked from 'example_node_1' via a 'next' link,
-T1> and links back via a 'prev' link.
-C2> # A code block at C2 detail level
-C2> data = {"key": "value", "count": 42}
-C2> for k, v in data.items():
-C2>     print(f"{k} = {v}")
-### ENDNODE
-'''
-    tree = gnml_tree(source)
+    tree = gnml_tree(gnml_source)
     nodes = GNMLVisitor().visit(tree)
     print(nodes)
     print(len(nodes))

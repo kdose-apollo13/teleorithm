@@ -1,5 +1,4 @@
 # vbwise/data/initial_content.py
-from vbwise.source_parser import parse_source_string_to_nodes
 
 # This string should be in the format expected by vbwise.gramjam.NodeGrammar
 INITIAL_NODES_SOURCE = """

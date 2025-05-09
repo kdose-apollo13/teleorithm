@@ -1,0 +1,47 @@
+Tk {
+    title: "TKML Scrollable Demo"
+    geometry: "450x400"
+
+    Frame {
+        id: "main_container"
+
+        Label {
+            text: "My Application Header"
+        }
+
+        Scrollable { // 'Scrollable' is treated as a generic block identifier by your grammar
+            id: "my_scrollable_area"
+
+            Label { text: "Content Label 1 (Inside Scrollable)" }
+            Button { text: "Button A" }
+            Entry { /* No props needed for a basic entry */ }
+            Label { text: "Content Label 2" }
+            Text { // 'Text' is also a generic block identifier
+                text: "Multi-line text area.\\nWith a few lines.\\nTo test scrolling." // Newlines escaped
+                config: { height: 5, width: 30 } // This is a nested_prop
+            }
+            Label { text: "Content Label 3" }
+            Button { text: "Button B" }
+            Label { text: "Content Label 4" }
+            Label { text: "Content Label 5" }
+            Entry { }
+            Label { text: "Content Label 6" }
+            Label { text: "Content Label 7 - More text to ensure scrolling is needed for sure." }
+            Button { text: "Button C (Near Bottom)" }
+            Label { text: "Content Label 8 (Very Bottom)" }
+        }
+
+        Frame {
+            id: "footer"
+
+            Label {
+                text: "Status: Ready"
+            }
+            Button {
+                text: "Quit"
+                command: "quit_app_command" // String value for command property
+            }
+        }
+    }
+}
+

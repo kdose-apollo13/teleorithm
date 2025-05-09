@@ -4,7 +4,6 @@
 from parsimonious.grammar import Grammar
 from parsimonious.exceptions import ParseError
 
-
 # TODO: analyze for associativity problems
 # TODO: encompass unicode?
 TKML_GRAMMAR = r'''

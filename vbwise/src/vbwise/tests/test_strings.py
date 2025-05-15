@@ -7,9 +7,9 @@ from klab.ututils import Spec, Runner
 from parsimonious.nodes import Node
 from parsimonious.grammar import Grammar
 
-from tkml.grammar import tkml_tree
-from tkml.strings import valid_strings
-from tkml.utils import node_iter, count_nodes
+from vbwise.tkmlgrammar import tkml_tree
+from vbwise.strings import valid_strings
+from vbwise.utils import node_iter, count_nodes
 
 
 class test_valid_strings_as_properties(Spec):

@@ -1,9 +1,8 @@
 {
-    "current_node_id": "node_alpha",
+    "current_node_id": "help_node",
     "active_text_levels": [
         "T1",
-        "T2",
-        "T3"
+        "T2"
     ],
     "active_code_levels": [
         "C1"

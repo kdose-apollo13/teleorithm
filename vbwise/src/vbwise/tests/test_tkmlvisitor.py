@@ -6,8 +6,8 @@ from klab.ututils import Spec, Runner
 
 from textwrap import dedent
 
-from tkml.grammar import tkml_tree
-from tkml.tkmlvisitor import TKMLVisitor
+from vbwise.tkmlgrammar import tkml_tree
+from vbwise.tkmlvisitor import TKMLVisitor
 
 
 class test_single_and_multiline_sources(Spec):

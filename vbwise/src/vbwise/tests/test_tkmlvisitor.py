@@ -10,18 +10,6 @@ from tkml.grammar import tkml_tree
 from tkml.tkmlvisitor import TKMLVisitor
 
 
-class test_curly_braces_within_an_f_string(Spec):
-    def setUp(self):
-        self.thing = 'whatever'
-    
-    def test_are_preserved_by_doubling_the_brace_chars(self):
-        s = f'outer braces {{ all the {self.thing} forever and ever }}'
-        self.equa(
-            s,
-            'outer braces { all the whatever forever and ever }'
-        )
-
-
 class test_single_and_multiline_sources(Spec):
     def setUp(self):
         self.single = 'Name {}'
@@ -152,7 +140,7 @@ class test_example_tkml_tree_when_walked_for_components(Spec):
         )
         
 
-class test_full_rebuild_on_nontrivial_source(Spec):
+class test_nontrivial_source(Spec):
     def setUp(self):
         source = dedent('''
         App {

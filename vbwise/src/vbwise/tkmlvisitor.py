@@ -7,6 +7,8 @@
 from parsimonious.nodes import NodeVisitor
 from parsimonious.exceptions import VisitationError
 
+from vbwise.tkmlgrammar import tkml_tree
+
 
 class TKMLVisitor(NodeVisitor):
     """
@@ -102,10 +104,8 @@ class TKMLVisitor(NodeVisitor):
 
 
 if __name__ == '__main__':
-    from tkml.grammar import tkml_tree
     source = 'App { blah: { thing: 22.1 }}'
     tree = tkml_tree(source)
     comps = TKMLVisitor().visit(tree)
     print(comps)
-
 

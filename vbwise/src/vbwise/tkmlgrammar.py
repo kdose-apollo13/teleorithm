@@ -6,10 +6,10 @@
 from parsimonious.grammar import Grammar
 from parsimonious.nodes import Node
 
-from igrammar import IGrammar
+from vbwise.igrammar import IGrammar
 
 
-GRAMMAR = r'''
+TKML_GRAMMAR = r'''
 tkml            = ws block ws
 block           = identifier ws "{" ws item* ws "}"
 item            = (prop / block) ws
@@ -33,19 +33,39 @@ Block {
     nested_prop: { v: #123ABC q: 1000 }
     nested_block {
         0: "digit identifier"
-        one.two: "dotted identifer"
+        one.two: "dotted identifier"
     }
 }
 '''
 
+
+def tkml_tree(source):
+    """
+        source
+            : str
+            : tkml-compliant source text
+
+        returns
+            > parsimonious.nodes.Node
+
+        raises
+            ! ValueError
+
+    """
+    tree = IGrammar(TKML_GRAMMAR).parse(source)
+    return tree
+
+
 if __name__ == '__main__':
-    root = IGrammar(GRAMMAR).parse(EXAMPLE_SOURCE)
+    root = IGrammar(TKML_GRAMMAR).parse(EXAMPLE_SOURCE)
     assert isinstance(root, Node)
     assert root.full_text == EXAMPLE_SOURCE
     assert root.expr_name == 'tkml'
     assert root.end == len(EXAMPLE_SOURCE)
 
-    grammar = IGrammar(GRAMMAR)
+    assert tkml_tree(EXAMPLE_SOURCE) == root
+
+    grammar = IGrammar(TKML_GRAMMAR)
     assert isinstance(grammar, Grammar)
 
     source = '2701'

@@ -1,8 +1,0 @@
-App {
-    title: 'align failure successwise'
-    geometry: '400x900'
-
-    Scrollable {
-        Leaf { id: l1 }
-    }
-}

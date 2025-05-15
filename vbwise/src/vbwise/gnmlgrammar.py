@@ -6,7 +6,7 @@
 from parsimonious.grammar import Grammar
 from parsimonious.nodes import Node
 
-from igrammar import IGrammar
+from vbwise.igrammar import IGrammar
 
 
 GNML_GRAMMAR = r'''
@@ -65,6 +65,7 @@ C1>
 ### ENDNODE
 '''
 
+
 def gnml_tree(source):
     """
         source
@@ -81,12 +82,15 @@ def gnml_tree(source):
     tree = IGrammar(GNML_GRAMMAR).parse(source)
     return tree
 
+
 if __name__ == '__main__':
     root = IGrammar(GNML_GRAMMAR).parse(EXAMPLE_SOURCE)
     assert isinstance(root, Node)
     assert root.full_text == EXAMPLE_SOURCE
     assert root.expr_name == 'gnml'
     assert root.end == len(EXAMPLE_SOURCE)
+
+    assert gnml_tree(EXAMPLE_SOURCE) == root
 
     grammar = IGrammar(GNML_GRAMMAR)
     assert isinstance(grammar, Grammar)

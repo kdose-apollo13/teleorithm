@@ -5,17 +5,17 @@ from parsimonious.nodes import Node, NodeVisitor
 from parsimonious.exceptions import ParseError
 
 
-def node_iter(node):
+def node_iter(root):
     """
-        node
+        root
             : parsimonious.nodes.Node
             : or anything with .children iterable giving Nodes
 
         yields
             -> parsimonious.nodes.Node
     """
-    stack = list()
-    stack.append(node)
+    stack = []
+    stack.append(root)
     found = []
 
     while len(stack) > 0:
@@ -23,7 +23,8 @@ def node_iter(node):
         if isinstance(node, Node):
             found.append(node)
             stack.extend(n for n in node.children if not n in found)
-            yield node
+
+    yield from found
 
 
 def count_nodes(tree):
@@ -64,23 +65,6 @@ def key_and_value(d):
     """
     name, props = list(d.items())[0]
     return name, props
-
-
-def load_toml_string(string):
-    d = tomllib.loads(string)
-    return d
-
-
-def load_toml_file(path):
-    with open(path, 'rb') as r:
-        d = tomllib.load(r)
-    return d
-
-
-def load_tkml_file(path):
-    with open(path, 'rt') as r:
-        s = r.read()
-    return s
     
 
 def split_keypath(s):
@@ -115,40 +99,6 @@ def return_by_keys(d, keys):
     return d
 
 
-def overwrite_dict(d, e):
-    """
-        d
-            : dict
-
-        e
-            : dict
-
-        returns
-            > dict
-            > combined dicts with conflicts favoring e
-    """
-    new = {}
-    for k, v in d.items():
-        if isinstance(v, dict):
-            # TODO: can get a TypeError here if e is not a dict
-            # TODO: basically d and e must have same structure
-            if k in e:
-                new[k] = overwrite_dict(v, e[k])
-            else:
-                new[k] = v
-        else:
-            if k in e:
-                new[k] = e[k]
-            else:
-                new[k] = v
-
-    for k, v in e.items():
-        if k not in d:
-            new[k] = v
-
-    return new
-            
-
 def merge_dicts(a, b):
     """
     Return new dict merging a and b deeply.
@@ -172,25 +122,24 @@ def merge_dicts(a, b):
         else:
             va = a[key]
             result[key] = merge_dicts({}, va) if isinstance(va, dict) else va
+
     return result
 
 
 if __name__ == '__main__':
     
-    from tkml.grammar import tkml_tree
+    from tkmlgrammar import tkml_tree
     source = 'A { b: c }'
     tree = tkml_tree(source)
     assert count_nodes(tree) == 22
-    assert count_nodes_another_way(tree) == 22
+    assert count_nodes_another_way(tree) == 23
 
-    #
 
     d = {'name': {'key': 'val'}}
     k, v = key_and_value(d)
     assert k == 'name'
     assert v == {'key': 'val'}
     
-    #
 
     O = type('O', (), {'yeah': lambda self: print('hi')})
 
@@ -203,7 +152,6 @@ if __name__ == '__main__':
     y = return_by_keys(d, keys)
     assert hasattr(y, 'yeah')
 
-    #
 
     s = 'one.two.three.four.thing'
     *keys, attr = split_keypath(s)

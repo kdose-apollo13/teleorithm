@@ -1,6 +1,3 @@
-"""
-    | teleorithm |
-"""
 from unittest import main, TestCase
 from klab.ututils import Spec, Runner
 
@@ -10,7 +7,7 @@ from parsimonious.exceptions import ParseError
 
 from collections import OrderedDict
 
-from tkml.grammar import TKML_GRAMMAR, IGrammar
+from vbwise.igrammar import IGrammar
 
 
 class test_calling_parsimonious_Grammar(Spec):

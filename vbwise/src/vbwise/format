@@ -1,0 +1,28 @@
+root {
+    kind: Tk
+    entry { kind: Entry }
+    button { kind: Button }
+}
+
+
+
+[root.props]
+title = "State Sync App"
+geometry = "300x100"
+
+[entry.props.grid]
+row = 0
+column = 0
+
+[button.props.grid]
+row = 0
+column = 1
+
+[button.props.config]
+text = "Save"
+
+[button.props.bind]
+"<Button-1>" = "save_text"
+
+
+

@@ -107,6 +107,7 @@ class TKMLVisitor(NodeVisitor):
 
 if __name__ == '__main__':
     # notice nested props are NOT comma-separated
+
     source = dedent('''
         Block {
             string: "a string value"

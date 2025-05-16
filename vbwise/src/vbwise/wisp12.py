@@ -1,6 +1,12 @@
 # wisp12.py
 import tkinter as tk
 
+
+STORED_STATE = {
+    'text': 'some_text'
+}
+
+
 class App:
     def __init__(self, state, layout):
         self.state = state
@@ -14,8 +20,7 @@ class App:
         entry = self.widgets.get("entry")
         if entry:
             self.state["text"] = entry.get()
-            with open('wisp12_state.json', 'wt') as w:
-                json.dump(self.state, w)
+            STORED_STATE = self.state
 
     def build(self):
         def recurse(parent, name, node):
@@ -56,10 +61,8 @@ class App:
 
 # --- sample usage ---
 
-import json
-
-with open('wisp12_state.json', 'rt') as r:
-    state = json.load(r)
+# mock load (eg) json, toml, tkml, gnml
+state = STORED_STATE
 
 layout = {
     "root": {

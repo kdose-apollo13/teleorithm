@@ -5,7 +5,7 @@ import os
 import re
 
 # Import refactored components
-from data import comp_tkml_wisp5, style_toml_wisp5, nodes_gnml_wisp5
+from data import comp_tkml, style_toml, nodes_gnml
 from app_state import AppState
 from commands import Command, GotoCommand, SetVerbosityCommand # Ensure this import is correct
 
@@ -313,8 +313,10 @@ class NodeNavigatorApp:
         component_type = tkml_config.get("type")
         props = self._get_style_props(component_type, tkml_config.get("props"))
         command_action = None
-        if component_type == "PrevButton": command_action = self._show_prev_node
-        elif component_type == "NextButton": command_action = self._show_next_node
+        if component_type == "PrevButton": 
+            command_action = self._show_prev_node
+        elif component_type == "NextButton":
+            command_action = self._show_next_node
         button = tk.Button(parent_tk, text=props.get("text",component_type), command=command_action)
         button.pack(side=props.get("side",tk.LEFT), padx=props.get("padx",5))
         return button
@@ -541,11 +543,11 @@ class NodeNavigatorApp:
 # --- Main Execution ---
 if __name__ == "__main__":
     print("Loading TKML...")
-    parsed_comp_layout = load.tkml_string(comp_tkml_wisp5)
+    parsed_comp_layout = load.tkml_string(comp_tkml)
     print("Loading TOML...")
-    parsed_style_config = load.toml_string(style_toml_wisp5)
+    parsed_style_config = load.toml_string(style_toml)
     print("Loading GNML...")
-    parsed_nodes_data = load.gnml_string(nodes_gnml_wisp5)
+    parsed_nodes_data = load.gnml_string(nodes_gnml)
 
     # Initialize AppState with loaded data
     app_state = AppState(parsed_nodes_data, parsed_style_config)
@@ -554,3 +556,4 @@ if __name__ == "__main__":
     # Initialize the main application UI, passing the state and configurations
     app_ui = NodeNavigatorApp(root, app_state, parsed_comp_layout, parsed_style_config)
     root.mainloop()
+

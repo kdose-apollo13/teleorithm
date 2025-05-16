@@ -14,13 +14,13 @@ tkml            = ws block ws
 block           = identifier ws "{" ws item* ws "}"
 item            = (prop / block) ws
 prop            = identifier ws ":" ws (nested_props / value) ws
-nested_props    = "{" ws inner_prop* ws "}"
+nested_props    = "{" ws inner_prop*  ws "}"
 inner_prop      = identifier ws ":" ws value ws
 value           = string / color / number / identifier
 string          = ~r'"([^\n"\\]|(\\[^\\]))*"' / ~r"'([^\n'\\]|(\\[^\\]))*'"
 color           = ~"#[a-zA-Z0-9]{6}"
 number          = ~r"[0-9]+(\.[0-9]+)?"
-identifier      = ~r"[a-zA-Z0-9_]+(\.[a-zA-Z0-9_]+)*" 
+identifier      = ~r"[a-zA-Z0-9_<>]+(\.[a-zA-Z0-9_<>]+)*" 
 ws              = ~"\\s*"
 '''
 
@@ -35,6 +35,7 @@ Block {
         0: "digit identifier"
         one.two: "dotted identifier"
     }
+    bind: { <Return>: 'yeah' }
 }
 '''
 

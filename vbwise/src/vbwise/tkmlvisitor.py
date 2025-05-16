@@ -7,6 +7,8 @@
 from parsimonious.nodes import NodeVisitor
 from parsimonious.exceptions import VisitationError
 
+from textwrap import dedent
+
 from vbwise.tkmlgrammar import tkml_tree
 
 
@@ -104,7 +106,21 @@ class TKMLVisitor(NodeVisitor):
 
 
 if __name__ == '__main__':
-    source = 'App { blah: { thing: 22.1 }}'
+    # notice nested props are NOT comma-separated
+    source = dedent('''
+        Block {
+            string: "a string value"
+            number: 31
+            float: 23.529
+            color: #AA1122
+            nested_prop: { v: #123ABC q: 1000 }
+            nested_block {
+                0: "digit identifier"
+                one.two: "dotted identifier"
+            }
+            bind: { <Return>: some.func }
+        }
+    ''')
     tree = tkml_tree(source)
     comps = TKMLVisitor().visit(tree)
     print(comps)

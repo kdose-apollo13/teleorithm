@@ -1,6 +1,6 @@
 # data.py - Extracted data and configuration strings for Wisp6
 
-comp_tkml_wisp5 = """
+comp_tkml = """
 RootApp {
     LeftPanel {
         ScrollableNodeDetailList {}
@@ -17,7 +17,7 @@ RootApp {
 }
 """
 
-style_toml_wisp5 = """
+style_toml = """
 [default.NodeListScrollable]
 leaf_width = 15
 leaf_side = "left"
@@ -44,7 +44,7 @@ height = 1
 [default.NextButton]
 """
 
-nodes_gnml_wisp5 = """
+nodes_gnml = """
 ### NODE
 --- id: help_node
 T1> Welcome to Wisp Navigator! (T1)

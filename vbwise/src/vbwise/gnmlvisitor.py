@@ -7,7 +7,7 @@
 from parsimonious.nodes import NodeVisitor
 from parsimonious.exceptions import VisitationError
 
-from vbwise.gnmlgrammar import gnml_tree, EXAMPLE_SOURCE as gnml_source
+from vbwise.gnmlgrammar import gnml_tree, EXAMPLE_SOURCE
 
 
 class GNMLVisitor(NodeVisitor):
@@ -164,7 +164,7 @@ class GNMLVisitor(NodeVisitor):
 
 
 if __name__ == '__main__':
-    tree = gnml_tree(gnml_source)
+    tree = gnml_tree(EXAMPLE_SOURCE)
     nodes = GNMLVisitor().visit(tree)
     print(nodes)
     print(len(nodes))

@@ -104,8 +104,8 @@ class test_example_tkml_tree_when_walked_for_components(Spec):
                 number: 31
                 float: 23.529
                 color: #AA1122
-                nested_block { v: #123ABC q: 1000}
-                nested_prop: { v: #123456 }
+                nested_block { v: #123ABC q: 1000 }
+                nested_prop: { v: #123456 q: 2000 }
                 0: "digit identifier"
             }
         ''')
@@ -123,7 +123,7 @@ class test_example_tkml_tree_when_walked_for_components(Spec):
                         'number': 31,
                         'float': 23.529,
                         'color': '#AA1122',
-                        'nested_prop': {'v': '#123456'},
+                        'nested_prop': {'v': '#123456', 'q': 2000},
                         '0': 'digit identifier',
                     },
                 'parts': [
@@ -151,6 +151,7 @@ class test_nontrivial_source(Spec):
             Scrollable {
                 Frame {
                     id: container
+                    bind: { <Return>: whatever }
 
                     Canvas {
                         id: viewport
@@ -188,7 +189,10 @@ class test_nontrivial_source(Spec):
                         'parts': [
                             {
                                 'type': 'Frame',
-                                'props': {'id': 'container'},
+                                'props': {
+                                    'id': 'container',
+                                    'bind': {'<Return>': 'whatever'}
+                                },
                                 'parts': [
                                     {
                                         'type': 'Canvas',

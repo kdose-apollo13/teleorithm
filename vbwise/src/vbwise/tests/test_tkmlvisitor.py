@@ -21,9 +21,10 @@ class test_single_and_multiline_sources(Spec):
         self.equa(self.single, self.multi)
 
     def test_have_identical_trees(self):
-        tree_single = tkml_tree(self.single)
-        tree_multi = tkml_tree(self.multi)
-        self.equa(tree_single, tree_multi)
+        self.equa(
+            tkml_tree(self.single),
+            tkml_tree(self.multi)
+        )
         
 
 class test_trivial_tkml_tree_when_walked_for_components(Spec):
@@ -80,6 +81,7 @@ class test_medium_tkml_tree_when_walked_for_components(Spec):
 
     def test_returns_expected_component_dict(self):
         root = TKMLVisitor().visit(self.tree)
+        self.maxDiff = None
         self.equa(
             root,
             {
@@ -124,7 +126,7 @@ class test_example_tkml_tree_when_walked_for_components(Spec):
                         'float': 23.529,
                         'color': '#AA1122',
                         'nested_prop': {'v': '#123456', 'q': 2000},
-                        '0': 'digit identifier',
+                        0: 'digit identifier',
                     },
                 'parts': [
                     {

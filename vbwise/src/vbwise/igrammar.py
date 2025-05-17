@@ -43,7 +43,7 @@ class IGrammar(Grammar):
         try:
             tree = super().parse(source)
         except ParseError as e:
-            raise ValueError('no valid path for this source')
+            raise ValueError('no valid path for this source', e.pos)
         else:
             return tree
 

@@ -7,72 +7,101 @@
 from parsimonious.nodes import NodeVisitor
 from parsimonious.exceptions import VisitationError
 
-from textwrap import dedent
-
 from vbwise.tkmlgrammar import tkml_tree
 
 
 class TKMLVisitor(NodeVisitor):
     """
-        knows how to walk tkml tree and extract components
-        method -> .visit(Node)
+        walks Node (tree) for components
     """
     def visit_tkml(self, node, visited):
         return visited[1]
 
     def visit_block(self, node, visited):
-        name = visited[0]
-        items = visited[4]  # item*
+        # block = identifier _ LBRACE _ block_member_list _ RBRACE
+        block_type_name = visited[0]  # Result of visit_identifier
+        member_results = visited[4]   # Result of visit_block_member_list
+
         props = {}
         parts = []
-        for item in items:
-            if isinstance(item, dict):
-                if "type" in item:
-                    parts.append(item)
-                else:
-                    props.update(item)
-        component = {'type': name, 'props': props, 'parts': parts}
-        return component
+        for member in member_results:
+            if isinstance(member, dict):
+                # Check for our canonical block structure
+                if 'type' in member and 'props' in member and 'parts' in member:
+                    # Check if the 'type' came from a identifier visit (is a string)
+                    if isinstance(member.get('type'), str):
+                         parts.append(member)
+                    else: # Should not happen if grammar & identifier visitor are correct
+                         props.update(member) # Treat as prop if type is not a string
+                else: # It's a property {key: value}
+                    props.update(member)
+        return {'type': block_type_name, 'props': props, 'parts': parts}
 
-    def visit_item(self, node, visited):
-        return visited[0][0]
+    def visit_block_member_list(self, node, visited):
+        return visited
+
+    def visit_block_member_entry(self, node, visited):
+        return visited[0]
+
+    def visit_block_member(self, node, visited):
+        return visited[0]
 
     def visit_prop(self, node, visited):
-        identifier = visited[0]
-        value_or_nested_props = visited[4][0]
-
-        if isinstance(value_or_nested_props, dict):
-            return {identifier: value_or_nested_props}
-        else:
-            return {identifier: value_or_nested_props}
-
-    def visit_nested_props(self, node, visited):
-        inner_props_list = visited[2]
-        nested_props_dict = {}
-        for inner_prop_item in inner_props_list:
-                 nested_props_dict.update(inner_prop_item)
-        return nested_props_dict
-
-    def visit_inner_prop(self, node, visited):
-        identifier = visited[0]
-        value = visited[4]
-        return {identifier: value}
+        # prop = identifier _ COLON _ value
+        key = visited[0]    # Result of visit_identifier
+        value = visited[4]  # Result of visit_value
+        return {key: value}
 
     def visit_value(self, node, visited):
+        # value = prop_group / string / number / color / identifier
         return visited[0]
+
+    def visit_prop_group(self, node, visited):
+        # prop_group = LBRACE _ prop_entry_list _ RBRACE
+        entry_results = visited[2] # Result of visit_prop_entry_list
+        props_dict = {}
+        for entry in entry_results:
+            props_dict.update(entry)
+        return props_dict
+
+    def visit_prop_entry_list(self, node, visited):
+        return visited
+
+    def visit_prop_entry_item(self, node, visited):
+        return visited[0]
+
+    def visit_prop_entry(self, node, visited):
+        # prop_entry = identifier _ COLON _ value
+        key = visited[0]    # Result of visit_identifier
+        value = visited[4]  # Result of visit_value
+        return {key: value}
+
+    def visit_identifier(self, node, visited): # For simple values that are identifiers
+        t = node.text
+        try:
+            n = int(t)
+        except ValueError:
+            pass
+        else:
+            return n
+
+        try:
+            n = float(t)
+        except ValueError:
+            pass
+        else:
+            return n
+
+        return t
 
     def visit_string(self, node, visited):
         t = node.text
-        if t.startswith('"'):
-            return t.strip('"')
-        else:
-            return t.strip("'")
-
-    def visit_identifier(self, node, visited):
-        return node.text
-
-    def visit_color(self, node, visited):
-        return node.text
+        # Strip quotes and handle basic escapes
+        if t.startswith('"') and t.endswith('"'):
+            return t[1:-1].replace(r'\"', '"').replace(r'\\', '\\')
+        elif t.startswith("'") and t.endswith("'"):
+            return t[1:-1].replace(r"\'", "'").replace(r'\\', '\\')
+        return t # Should not happen
 
     def visit_number(self, node, visited):
         t = node.text
@@ -81,7 +110,15 @@ class TKMLVisitor(NodeVisitor):
         else:
             return int(t)
 
+    def visit_color(self, node, visited):
+        return node.text
+        
     def generic_visit(self, node, visited):
+        # unhandled -> LBRACE, _ etc...
+        # if len(visited) == 1 and \
+        #    not isinstance(visited[0], list) and \
+        #    not isinstance(visited[0], Node):
+        #     return visited[0]
         return visited or node.text
 
     def visit(self, tree):
@@ -106,22 +143,7 @@ class TKMLVisitor(NodeVisitor):
 
 
 if __name__ == '__main__':
-    # notice nested props are NOT comma-separated
-
-    source = dedent('''
-        Block {
-            string: "a string value"
-            number: 31
-            float: 23.529
-            color: #AA1122
-            nested_prop: { v: #123ABC q: 1000 }
-            nested_block {
-                0: "digit identifier"
-                one.two: "dotted identifier"
-            }
-            bind: { <Return>: some.func }
-        }
-    ''')
+    source = 'Block {bind: {<Return>: some.func, x: 2}}'
     tree = tkml_tree(source)
     comps = TKMLVisitor().visit(tree)
     print(comps)

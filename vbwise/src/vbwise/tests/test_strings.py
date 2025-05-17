@@ -34,11 +34,11 @@ class test_valid_strings_as_properties(Spec):
                 if node.expr_name == 'string':
                     self.asrt(node.text in source)
 
-    def test_parsed_tree_has_23_nodes(self):
+    def test_parsed_tree_has_31_nodes(self):
         for source in self.sources:
             tree = tkml_tree(source)
             node_qty = count_nodes(tree)
-            self.equa(node_qty, 23)
+            self.equa(node_qty, 31)
 
 if __name__ == '__main__':
     main(testRunner=Runner)

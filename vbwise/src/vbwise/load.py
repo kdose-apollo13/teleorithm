@@ -19,8 +19,12 @@ def json_string(s):
         returns
             > dict
     """
-    d = json.loads(s)
-    return d
+    try:
+        d = json.loads(s)
+    except json.JSONDecodeError:
+        return {}
+    else:
+        return d
 
 
 def json_file(path):

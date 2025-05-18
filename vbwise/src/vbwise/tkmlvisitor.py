@@ -143,8 +143,62 @@ class TKMLVisitor(NodeVisitor):
 
 
 if __name__ == '__main__':
-    source = 'Block {bind: {<Return>: some.func, x: 2}}'
+    # source = 'Block {bind: {<Return>: some.func, x: 2}}'
+    source = '''
+    Block {
+        # comment line
+        NestedBlock {}  # with trailing comment
+
+        string: 'a "string" value'
+        escaped: "what about \\"this\\" huh?"
+        number: 31
+        float: 23.529
+        color: #AA1122
+        dotted.property: 'yeah'
+
+        multi_prop: { v: #123ABC q: 1000.xyz }
+        comma_prop: { v: #123ABC, q: 1000, z: X.2 }
+        multi_line_prop: {
+            foo: 1.2.A.B
+            bar: { 0: 1 },
+        }
+
+        bind: { <Return>: 'yeah' }
+
+        nested_block {
+            0: "digit identifier"
+            one.two: "dotted identifier"
+            bind: { <Button-1>: callback }
+        }
+    }
+    '''
+    source = '''
+    Tk {
+        id: root
+        title: "Elegant Data-Driven Demo"
+        geometry: "300x180"
+        Frame {
+            id: mainFrame
+            layout_style: "main_frame_layout"
+            Label {
+                id: myLabel
+                data_bind: { text: "text" }
+                style: "label_style"
+                layout_style: "label_layout"
+            }
+            Button {
+                id: myButton
+                text: "Change Text"
+                style: "button_style"
+                layout_style: "button_layout"
+                bind: { <Button-1>: "toggle_label_state" }
+            }
+        }
+    }
+    '''
     tree = tkml_tree(source)
     comps = TKMLVisitor().visit(tree)
-    print(comps)
+    import json
+    s = json.dumps(comps, indent=2)
+    print(s)
 

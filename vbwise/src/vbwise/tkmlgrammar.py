@@ -27,7 +27,7 @@ TKML_GRAMMAR = r"""
     COMMA               = ","
 
     string              = ~r'"([^"\\]|\\.)*"' / ~r"'([^'\\]|\\.)*'"
-    color               = ~r"#[a-fA-F0-9]{6}" # Specific token for color
+    color               = ~r"#[a-fA-F0-9]{6}"
     number              = ~r"-?[0-9]+(\.[0-9]+)?"
     identifier          = ~r"[a-zA-Z0-9_<>-]+(\.[a-zA-Z0-9_<>.-]+)*"
     

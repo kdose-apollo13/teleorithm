@@ -1,6 +1,7 @@
 """
     | teleorithm |
 """
+import json
 import tomllib
 
 from vbwise.tkmlgrammar import tkml_tree
@@ -8,6 +9,32 @@ from vbwise.tkmlvisitor import TKMLVisitor
 
 from vbwise.gnmlgrammar import gnml_tree
 from vbwise.gnmlvisitor import GNMLVisitor
+
+
+def json_string(s):
+    """
+        s
+            : str
+
+        returns
+            > dict
+    """
+    d = json.loads(s)
+    return d
+
+
+def json_file(path):
+    """
+        path
+            : str
+
+        returns
+            > dict
+    """
+    with open(path, 'rt') as r:
+        d = json.load(r)
+
+    return d
 
 
 def toml_string(s):

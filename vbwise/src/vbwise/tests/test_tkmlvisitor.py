@@ -157,7 +157,7 @@ class test_nontrivial_source(Spec):
 
                     Canvas {
                         id: viewport
-                        config: { yscrollcommand: 'scrollbar.set' }
+                        config: { yscrollcommand: scrollbar.set }
 
                         Frame { 
                             id: content 
@@ -166,7 +166,7 @@ class test_nontrivial_source(Spec):
 
                     Scrollbar { 
                         id: scrollbar
-                        config: { command: 'viewport.yview' }
+                        config: { command: viewport.yview }
                     }
                 }
             }

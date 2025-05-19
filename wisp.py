@@ -1,7 +1,8 @@
 """
     ~tkml~
     specify tkinter layouts nicely
-
+    
+    wild demo - builds string -> exec!
 """
 from unittest import main, TestCase
 from klab.lab import measure

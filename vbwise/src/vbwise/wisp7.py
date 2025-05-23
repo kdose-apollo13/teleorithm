@@ -1,7 +1,47 @@
+from graphlib import TopologicalSorter as TS
 import tkinter
 
 from vbwise import load
 
+
+tkml_source = '''
+Tk {
+    id: root
+    Frame {
+        id: frame
+        Canvas { 
+            id: canvas 
+            Frame { id: subframe }
+        }
+        Scrollbar { id: scrollbar }
+    }
+}
+'''
+
+t = load.tkml_string(tkml_source)
+# print(t)
+
+
+def bases_by_id(node, flat={}):
+    """
+        node
+            : dict
+
+        returns
+            >> recursively builds dict
+    """
+    _id = node['props']['id']
+    parts = node['parts']
+    for part in parts:
+        # each part has own _id and base of _id
+        flat[part['props']['id']] = [_id,]
+        bases_by_id(part, flat)
+
+    return flat
+
+
+f = bases_by_id(t)
+print(f)
 
 model = {
     'title': 'back in shape',
@@ -30,20 +70,7 @@ widgets = {
     }
 }
 
-
-from graphlib import TopologicalSorter as TS
-
-# this is what comes from tkml -> << id: [base,] >> mapping
-# and also goes back to canonical tkml
-d = {
-    'root': [],
-    'frame': ['root',],
-    'canvas': ['frame',],
-    'scrollbar': ['frame',],
-    'subframe': ['canvas',],
-}
-
-ts = TS(d)
+ts = TS(bases_by_id(t))
 widget_creation_order = list(ts.static_order())
 print(widget_creation_order)
 

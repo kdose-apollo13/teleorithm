@@ -75,6 +75,8 @@ store = ReactiveStore(parsed_tkml)
 widget_map = {}
 root_node = WidgetNode(parsed_tkml, store=store, widget_map=widget_map)
 
+assert widget_map[id(root_node.widget)] == root_node
+
 # Test external update
 
 external_update = lambda: store.update({

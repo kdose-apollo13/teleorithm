@@ -1,0 +1,11 @@
+{
+  "id": "node2",
+  "content": [
+    {
+      "type": "text",
+      "value": "<h1>Advanced Bash</h1><p>Scripting tips...</p>",
+      "metadata": { "level": "intermediate" }
+    }
+  ],
+  "metadata": { "author": "0x123", "timestamp": "2025-05-27T23:55:00Z", "tags": ["linux", "bash"] }
+}

@@ -1,0 +1,97 @@
+$ npx sv create
+-where? graph-app
+-which? minimal
+-type? no
+-what to add? vitest, playwright, sveltekit-adapter
+-adapter? static 
+-pacman? npm
+
+-> now have graph-app dir
+
+
+$ cd graph-app
+$ npm run dev
+-> can hot-change src/routes/*.svelte
+
+
+$ npm install electron
+
+
+# src/routes/+layout.js
+# ----------------------------------------------------------
+export const ssr = false;
+# ----------------------------------------------------------
+
+
+# svelte.config.js 
+# ----------------------------------------------------------
+// svelte.dev/docs/kit/adapter-static
+// svelte.dev/docs/kit/integrations
+import adapter from '@sveltejs/adapter-static';
+import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
+
+export default { 
+    preprocess: [vitePreprocess()],
+    
+    kit: { 
+        adapter: adapter({ 
+            pages: 'build', 
+            assets: 'build',
+            fallback: undefined,
+            precompress: false,
+            strict: true
+        }),
+    } 
+};
+# ----------------------------------------------------------
+
+
+# package.json
+# ----------------------------------------------------------
+...
+"main": "main.js",
+"scripts":  {... "start": "electron ."}
+# ----------------------------------------------------------
+
+
+# main.js
+# ----------------------------------------------------------
+import { app, BrowserWindow } from 'electron';
+
+function createWindow() {
+  const win = new BrowserWindow({
+    width: 800,
+    height: 600,
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true
+    }
+  });
+
+  // Load SvelteKit dev server for hot-reloading
+  win.loadURL('http://localhost:5173');
+}
+
+app.whenReady().then(() => {
+  createWindow();
+  app.on('activate', () => {
+    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+  });
+});
+
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') app.quit();
+});
+# ----------------------------------------------------------
+
+
+# in node_modules/electron/dist
+$ sudo chown root chrome-sandbox
+$ sudo chmod 4755 chrome-sandbox
+
+# two tabs/terminals [[ svelte dev server || electron process ]]
+$ npm run dev
+$ npm start
+
+
+$ npx playwright install

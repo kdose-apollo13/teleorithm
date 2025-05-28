@@ -9,7 +9,11 @@ from vbwise import load
 
 model = {
     'title': 'choomin\' with baba yaga',
-    'geometry': '400x300'
+}
+
+style = {
+    'geometry': '400x300',
+    'bg': '#112233'
 }
 
 
@@ -17,13 +21,14 @@ tkml_source = '''
 Tk {
     _id: root
     title: model.title
-    geometry: model.geometry
+    geometry: style.geometry
     grid_rowconfigure: { row: 0, weight: 1 }
     grid_columnconfigure: { column: 0, weight: 1}
 
     Frame {
         _id: frame
         grid: { row: 0, column: 0, sticky: nesw }
+        # how to get at style.bg in dicts
         config: { background: #112233 }
     }
 }
@@ -31,35 +36,14 @@ Tk {
 
 t = load.tkml_string(tkml_source)
 # print(t)
-
-
-def next_widget_name(_type, counter):
-    return '_'.join( (_type, str(next(counter))) )
-
-
 class WidgetIDs:
-    def __init__(self, sep='_'):
+    def __init__(self, sep="_"):
         self.sep = sep
         self.counter = count(start=1)
-        self.names = []
 
-    def _type_and_counter(self, node):
-        i = next(self.counter)
-        _type = node['type']
-        _id = _type + self.sep + str(i)
-        return _id
-    
     def new_id(self, node):
-        props = node.get('props', {})
-        if props:
-            if '_id' in props:
-                _id = props['_id']
-            else:
-                _id = self._type_and_counter(node)
-        else:
-            _id = self._type_and_counter(node)
-
-        return _id
+        props = node.get("props", {})
+        return props.get("_id", f"{node['type']}{self.sep}{next(self.counter)}")
         
 
 def widget_specs_by_id(node, flat=defaultdict(dict), widget_ids=WidgetIDs()):
@@ -90,7 +74,7 @@ def widget_specs_by_id(node, flat=defaultdict(dict), widget_ids=WidgetIDs()):
 
 
 specs_by_id = widget_specs_by_id(t)
-# print(json.dumps(specs_by_id, indent=2))
+print(json.dumps(specs_by_id, indent=2))
 
 
 def widget_bases_by_id(specs_by_id):
@@ -105,7 +89,7 @@ bases_by_id = widget_bases_by_id(specs_by_id)
 # print(bases_by_id)
 
 
-def widget_creation_order(bases_by_id):
+def widget_creation_order(bases_by_id): 
     ts = TS(bases_by_id)
     order = list(ts.static_order())
     return order
@@ -116,6 +100,7 @@ order = widget_creation_order(bases_by_id)
 
 runtime = {}
 
+# create widgets
 for _id in order:
     spec = specs_by_id[_id]
     _type = spec['_type']
@@ -129,15 +114,21 @@ for _id in order:
     widget = _class(_base_widget)
     runtime[_id] = {'widget': widget}
 
+
+# configure widgets
 for _id, spec in specs_by_id.items():
     widget = runtime[_id]['widget']
     methods = {k: v for k, v in spec.items() if k[0] != '_'}
 
     for name, o in methods.items():
-
-        if isinstance(o, str) and o.startswith('model.'):
-            _, key = o.split('.')
-            o = model[key]
+        
+        if isinstance(o, str) and '.' in o:
+            thing, key = o.split('.')
+            print(thing, key)
+            if thing == 'model':
+                o = model[key]
+            elif thing == 'style':
+                o = style[key]
 
         if name == 'grid_rowconfigure':
             widget.grid_rowconfigure(o['row'], weight=o['weight'])
@@ -155,6 +146,11 @@ for _id, spec in specs_by_id.items():
             print('unknown', name)
 
 # print(runtime)
-root = runtime['root']['widget']
-root.mainloop()
+
+try:
+    root = runtime['root']
+except KeyError:
+    root = runtime['Tk_1']
+
+root['widget'].mainloop()
 

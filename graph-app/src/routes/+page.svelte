@@ -1,49 +1,72 @@
 <script>
   import NodeList from '$lib/NodeList.svelte';
   import CommandLine from '$lib/CommandLine.svelte';
-  import '../app.css';
+  import { onMount } from 'svelte';
+  import '../app.css'; // Make sure global styles are applied
 
   let nodes = [];
+  let selectedNodeId = null; // Still useful to know the "active" node
+  let filter = 'TCIV'; // Default filter
 
-  window.api.listNodes().then((loadedNodes) => {
-    nodes = loadedNodes;
+  onMount(async () => {
+      try {
+        const loadedNodes = await window.api.listNodes();
+        nodes = loadedNodes;
+        if (nodes.length > 0) {
+            selectedNodeId = nodes[0].id; // Set initial "active" node
+        }
+      } catch (error) {
+          console.error("Failed to load nodes:", error);
+          nodes = [];
+      }
   });
 
   function handleCommand(event) {
-    const command = event.detail;
+    const command = event.detail.trim();
     console.log(`Command received: ${command}`);
-    // TODO: Parse and execute the command
+
+    if (command.toLowerCase().startsWith('filter ')) {
+      filter = command.substring(7).toUpperCase() || 'TCIV'; // Default if empty
+      console.log(`Filter set to: ${filter}`);
+    } else {
+      console.log("Unknown command:", command);
+    }
   }
+
+  function handleSelect(event) {
+    selectedNodeId = event.detail;
+    console.log("Active Node Set To:", selectedNodeId);
+  }
+
 </script>
 
 <style>
-  .container {
+  .page-container {
     display: flex;
     flex-direction: column;
     height: 100vh;
-    overflow: hidden; /* Prevent body scrolling */
+    overflow: hidden; /* Important: Prevents outer scrollbar */
   }
 
   .node-list-container {
-    flex: 1; /* Use flex: 1 for better sizing */
-    overflow-y: auto;
-    min-height: 0; /* Prevent flex overflow */
+    flex: 1; /* List takes up available space */
+    overflow-y: auto; /* List itself scrolls */
+    padding: 10px; /* Add some padding around the list */
   }
 
   .cli-container {
-    padding: 1rem;
+    padding: 0.5rem 1rem;
     border-top: 1px solid #ccc;
-    flex-shrink: 0; /* Prevent CLI from shrinking */
+    background-color: #eee;
+    flex-shrink: 0;
   }
 </style>
 
-<main>
-    <div class="container">
-      <div class="node-list-container">
-        <NodeList {nodes} />
-      </div>
-      <div class="cli-container">
-        <CommandLine on:command={handleCommand} />
-      </div>
-    </div>
-</main>
+<div class="page-container">
+  <div class="node-list-container">
+    <NodeList {nodes} {filter} {selectedNodeId} on:select={handleSelect} />
+  </div>
+  <div class="cli-container">
+    <CommandLine on:command={handleCommand} />
+  </div>
+</div>

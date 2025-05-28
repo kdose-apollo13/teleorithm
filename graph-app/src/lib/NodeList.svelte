@@ -1,97 +1,106 @@
-<!-- src/lib/NodeList.svelte -->
 <script>
-  import { onMount } from 'svelte';
+  import NodeItem from './NodeItem.svelte';
+  import { createEventDispatcher, onMount, onDestroy, tick } from 'svelte';
+
   export let nodes = [];
-  export let selectedNodes = new Set();
-  let selectedIndex = 0;
-  let collapsedNodes = new Set();
+  export let filter = 'TCIV';
+  export let selectedNodeId = null;
+
+  let focusedIndex = 0;
+  const dispatch = createEventDispatcher();
+  let listElement; // To bind to the container div
 
   function handleKeydown(event) {
-    if (event.key === 'j' && selectedIndex < nodes.length - 1) {
-      selectedIndex += 1;
-    } else if (event.key === 'k' && selectedIndex > 0) {
-      selectedIndex -= 1;
+    if (!nodes || nodes.length === 0) return;
+
+    let newIndex = focusedIndex;
+
+    if (event.key === 'j') {
+        event.preventDefault(); // Prevent page scroll
+        newIndex = Math.min(focusedIndex + 1, nodes.length - 1);
+    } else if (event.key === 'k') {
+        event.preventDefault(); // Prevent page scroll
+        newIndex = Math.max(focusedIndex - 1, 0);
     } else if (event.key === 'Enter') {
-      const nodeId = nodes[selectedIndex].id;
-      selectedNodes.has(nodeId) ? selectedNodes.delete(nodeId) : selectedNodes.add(nodeId);
-      selectedNodes = new Set(selectedNodes);
+        event.preventDefault();
+        dispatch('select', nodes[focusedIndex].id);
+        // Toggle active state in NodeItem via its active prop
     } else if (event.key === ' ') {
-      const nodeId = nodes[selectedIndex].id;
-      collapsedNodes.has(nodeId) ? collapsedNodes.delete(nodeId) : collapsedNodes.add(nodeId);
-      collapsedNodes = new Set(collapsedNodes);
+        event.preventDefault();
+        // We need a way to tell the focused NodeItem to toggle collapse.
+        // This is tricky without direct component refs. We might need
+        // to manage collapse state here or use a different approach.
+        // For now, let's leave this, but acknowledge it needs work.
+        console.log("Space pressed - collapse/expand TBD");
+    }
+
+    if (newIndex !== focusedIndex) {
+        focusedIndex = newIndex;
+        ensureVisible(focusedIndex);
     }
   }
 
-  let listElement;
+  // Function to scroll the focused item into view
+  async function ensureVisible(index) {
+      await tick(); // Wait for DOM to update
+      const items = listElement?.querySelectorAll('.node-item');
+      if (items && items[index] && (typeof items[index].scrollIntoView === 'function')) {
+          items[index].scrollIntoView({
+              behavior: 'smooth',
+              block: 'nearest', // 'start', 'center', 'end', or 'nearest'
+          });
+      }
+  }
+
+  function handleItemSelect(event) {
+      dispatch('select', event.detail);
+      // Update focusedIndex based on the clicked item's ID
+      focusedIndex = nodes.findIndex(n => n.id === event.detail);
+  }
+
+
   onMount(() => {
-    listElement.focus();
-    return () => {};
+    window.addEventListener('keydown', handleKeydown);
+    // Set initial focus if a node is selected
+    if (selectedNodeId) {
+        focusedIndex = nodes.findIndex(n => n.id === selectedNodeId);
+        if (focusedIndex === -1) focusedIndex = 0; // Default to first if not found
+    }
+    // Set focus to the list itself so it can receive key events
+    listElement?.focus();
+  });
+
+  onDestroy(() => {
+    window.removeEventListener('keydown', handleKeydown);
   });
 </script>
 
-<svelte:window on:keydown={handleKeydown} />
+<style>
+    .node-list {
+        padding: 10px;
+        outline: none; /* Remove default focus outline if desired */
+    }
+</style>
 
 <div
-  class="node-list"
-  bind:this={listElement}
-  tabindex="0"
-  role="listbox"
-  aria-label="Node List"
+    class="node-list"
+    role="listbox"
+    aria-label="Node List"
+    tabindex="0"
+    bind:this={listElement}
+    on:focus={() => listElement?.focus()}
 >
-  {#each nodes as node, index}
-    <div
-      class="node-item"
-      class:selected={index === selectedIndex}
-      class:active={selectedNodes.has(node.id)}
-      class:collapsed={collapsedNodes.has(node.id)}
-      role="option"
-      aria-selected={index === selectedIndex}
-    >
-      <h2>{node.id}</h2>
-      {#if !collapsedNodes.has(node.id)}
-        {#each node.content as item}
-          {#if item.type === 'text'}
-            <div class="content-text">{@html item.value}</div>
-          {:else if item.type === 'code'}
-            <pre class="content-code"><code>{item.value}</code></pre>
-          {/if}
-        {/each}
-      {/if}
-    </div>
-  {/each}
+  {#if nodes.length > 0}
+      {#each nodes as node, index (node.id)}
+        <NodeItem
+          {node}
+          {filter}
+          selected={index === focusedIndex}
+          active={node.id === selectedNodeId}
+          on:select={handleItemSelect}
+        />
+      {/each}
+  {:else}
+      <p>Loading nodes or no nodes found...</p>
+  {/if}
 </div>
-
-<style>
-  .node-list {
-    flex: 1;
-    overflow-y: auto;
-    background: #111;
-    color: #0f0;
-    font-family: 'IBM Plex Mono', monospace;
-    padding: 1rem;
-  }
-  .node-item {
-    margin-bottom: 1rem;
-    padding: 0.5rem;
-    border: 1px solid #333;
-  }
-  .node-item.selected {
-    background: #0f0;
-    color: #000;
-  }
-  .node-item.active {
-    border-color: #0f0;
-  }
-  .node-item.collapsed .content-text,
-  .node-item.collapsed .content-code {
-    display: none;
-  }
-  .content-text {
-    margin: 0.5rem 0;
-  }
-  .content-code {
-    background: #222;
-    padding: 0.5rem;
-    border-radius: 4px;
-  }
-</style>

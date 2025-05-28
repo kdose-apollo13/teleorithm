@@ -13,7 +13,6 @@ export default {
             assets: 'build',
             fallback: undefined,
             precompress: false,
-            strict: true
         }),
     } 
 };

@@ -1,8 +1,10 @@
 <script>
   import { onMount } from 'svelte';
+  import '../app.css';
   import NodeList from '$lib/NodeList.svelte';
   let nodes = [];
   let error = null;
+  let selectedNodes = new Set();
 
   async function loadNodes() {
     try {
@@ -18,6 +20,18 @@
     }
   }
 
+  function handleCommand(event) {
+    const { cmd } = event.detail;
+    const [action, ...args] = cmd.split(' ');
+    if (action === 'select' && args[0]) {
+      const nodeId = args[0];
+      if (nodes.some(n => n.id === nodeId)) {
+        selectedNodes.has(nodeId) ? selectedNodes.delete(nodeId) : selectedNodes.add(nodeId);
+        selectedNodes = new Set(selectedNodes);
+      }
+    }
+  }
+
   onMount(() => {
     loadNodes();
     return () => {};
@@ -28,7 +42,7 @@
   {#if error}
     <p style="color: red;">Error: {error}</p>
   {/if}
-  <NodeList {nodes} />
+  <NodeList {nodes} {selectedNodes} />
 </main>
 
 <style>
@@ -36,11 +50,11 @@
     font-family: 'IBM Plex Mono', monospace;
     background: #000;
     color: #0f0;
-    margin: 0;
-    padding: 0;
     height: 100vh;
-    overflow: hidden; /* Prevent outer scrollbar */
+    width: 100vw;
+    overflow: hidden;
     display: flex;
     flex-direction: column;
+    box-sizing: border-box;
   }
 </style>

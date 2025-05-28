@@ -1,8 +1,9 @@
+<!-- src/lib/NodeList.svelte -->
 <script>
   import { onMount } from 'svelte';
   export let nodes = [];
+  export let selectedNodes = new Set();
   let selectedIndex = 0;
-  let selectedNodes = new Set();
   let collapsedNodes = new Set();
 
   function handleKeydown(event) {
@@ -62,8 +63,8 @@
 
 <style>
   .node-list {
-    flex: 1; /* Fill available space */
-    overflow-y: auto; /* Inner scrollbar when needed */
+    flex: 1;
+    overflow-y: auto;
     background: #111;
     color: #0f0;
     font-family: 'IBM Plex Mono', monospace;

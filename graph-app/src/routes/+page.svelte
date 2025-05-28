@@ -1,60 +1,49 @@
 <script>
-  import { onMount } from 'svelte';
-  import '../app.css';
   import NodeList from '$lib/NodeList.svelte';
-  let nodes = [];
-  let error = null;
-  let selectedNodes = new Set();
+  import CommandLine from '$lib/CommandLine.svelte';
+  import '../app.css';
 
-  async function loadNodes() {
-    try {
-      console.log('window.api:', window.api);
-      if (!window.api || !window.api.listNodes) {
-        throw new Error('window.api.listNodes is not available');
-      }
-      nodes = await window.api.listNodes();
-      console.log('Nodes received:', nodes);
-    } catch (err) {
-      error = err.message;
-      console.error('Load nodes error:', err);
-    }
-  }
+  let nodes = [];
+
+  window.api.listNodes().then((loadedNodes) => {
+    nodes = loadedNodes;
+  });
 
   function handleCommand(event) {
-    const { cmd } = event.detail;
-    const [action, ...args] = cmd.split(' ');
-    if (action === 'select' && args[0]) {
-      const nodeId = args[0];
-      if (nodes.some(n => n.id === nodeId)) {
-        selectedNodes.has(nodeId) ? selectedNodes.delete(nodeId) : selectedNodes.add(nodeId);
-        selectedNodes = new Set(selectedNodes);
-      }
-    }
+    const command = event.detail;
+    console.log(`Command received: ${command}`);
+    // TODO: Parse and execute the command
   }
-
-  onMount(() => {
-    loadNodes();
-    return () => {};
-  });
 </script>
 
-<main>
-  {#if error}
-    <p style="color: red;">Error: {error}</p>
-  {/if}
-  <NodeList {nodes} {selectedNodes} />
-</main>
-
 <style>
-  main {
-    font-family: 'IBM Plex Mono', monospace;
-    background: #000;
-    color: #0f0;
-    height: 100vh;
-    width: 100vw;
-    overflow: hidden;
+  .container {
     display: flex;
     flex-direction: column;
-    box-sizing: border-box;
+    height: 100vh;
+    overflow: hidden; /* Prevent body scrolling */
+  }
+
+  .node-list-container {
+    flex: 1; /* Use flex: 1 for better sizing */
+    overflow-y: auto;
+    min-height: 0; /* Prevent flex overflow */
+  }
+
+  .cli-container {
+    padding: 1rem;
+    border-top: 1px solid #ccc;
+    flex-shrink: 0; /* Prevent CLI from shrinking */
   }
 </style>
+
+<main>
+    <div class="container">
+      <div class="node-list-container">
+        <NodeList {nodes} />
+      </div>
+      <div class="cli-container">
+        <CommandLine on:command={handleCommand} />
+      </div>
+    </div>
+</main>

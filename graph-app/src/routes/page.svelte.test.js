@@ -1,4 +1,3 @@
-// src/routes/+page.test.js
 import { render, screen } from '@testing-library/svelte';
 import { describe, it, expect, vi } from 'vitest';
 import Page from './+page.svelte';
@@ -16,7 +15,9 @@ vi.stubGlobal('api', {
 describe('Page component', () => {
   it('renders the node list with nodes', async () => {
     render(Page);
-    expect(await screen.findByRole('listbox', { name: 'Node List' })).toBeInTheDocument();
+    const listboxes = await screen.findAllByRole('listbox', { name: 'Node List' });
+    expect(listboxes).toHaveLength(1);
+    expect(listboxes[0]).toBeInTheDocument();
     expect(await screen.findByText('node1')).toBeInTheDocument();
     expect(await screen.findByText('node2')).toBeInTheDocument();
   });

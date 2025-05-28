@@ -1,43 +1,117 @@
+<!-- src/routes/+page.svelte -->
 <script>
+  import { onMount } from 'svelte';
+  import '../app.css';
   import NodeList from '$lib/NodeList.svelte';
   import CommandLine from '$lib/CommandLine.svelte';
-  import { onMount } from 'svelte';
-  import '../app.css'; // Make sure global styles are applied
 
   let nodes = [];
-  let selectedNodeId = null; // Still useful to know the "active" node
-  let filter = 'TCIV'; // Default filter
+  let selectedNodeId = null;
+  let focusedIndex = 0;
+  let filter = 'TCIV';
+  let focusedRegion = 'cli';
+  let cliInputElement;
+  let nodeListContainerElement;
+
+  $: filteredNodes = filter === 'TCIV' ? nodes : nodes.filter(n => n.content.some(c => c.metadata?.level === filter));
 
   onMount(async () => {
-      try {
-        const loadedNodes = await window.api.listNodes();
-        nodes = loadedNodes;
-        if (nodes.length > 0) {
-            selectedNodeId = nodes[0].id; // Set initial "active" node
-        }
-      } catch (error) {
-          console.error("Failed to load nodes:", error);
-          nodes = [];
+    try {
+      nodes = await window.api.listNodes();
+      if (nodes.length > 0) focusedIndex = 0;
+    } catch (error) {
+      console.error('Failed to load nodes:', error);
+      nodes = [];
+    }
+    window.addEventListener('keydown', handleKeydown, true);
+    // Retry focus until element is ready
+    const focusInterval = setInterval(() => {
+      if (cliInputElement) {
+        focusCli();
+        clearInterval(focusInterval);
       }
+    }, 50);
+    return () => {
+      clearInterval(focusInterval);
+      window.removeEventListener('keydown', handleKeydown, true);
+    };
   });
 
-  function handleCommand(event) {
-    const command = event.detail.trim();
-    console.log(`Command received: ${command}`);
-
-    if (command.toLowerCase().startsWith('filter ')) {
-      filter = command.substring(7).toUpperCase() || 'TCIV'; // Default if empty
-      console.log(`Filter set to: ${filter}`);
-    } else {
-      console.log("Unknown command:", command);
+  function focusCli() {
+    focusedRegion = 'cli';
+    nodeListContainerElement?.blur();
+    if (cliInputElement) {
+      cliInputElement.focus();
+      console.log('Focus: CLI, Active:', document.activeElement?.className);
     }
   }
 
-  function handleSelect(event) {
-    selectedNodeId = event.detail;
-    console.log("Active Node Set To:", selectedNodeId);
+  function focusNodeList() {
+    focusedRegion = 'nodelist';
+    cliInputElement?.blur();
+    nodeListContainerElement?.focus();
+    console.log('Focus: NodeList, Active:', document.activeElement?.className);
   }
 
+  function handleKeydown(event) {
+    const { key } = event;
+    console.log(`Key: ${key}, Region: ${focusedRegion}, Active: ${document.activeElement?.className}`);
+
+    if (focusedRegion === 'cli') {
+      if (key === 'Escape') {
+        event.preventDefault();
+        event.stopPropagation();
+        focusNodeList();
+      }
+    } else if (focusedRegion === 'nodelist') {
+      if (key === ';') {
+        event.preventDefault();
+        event.stopPropagation();
+        focusCli();
+      } else if (key === 'j' && focusedIndex < filteredNodes.length - 1) {
+        event.preventDefault();
+        focusedIndex += 1;
+      } else if (key === 'k' && focusedIndex > 0) {
+        event.preventDefault();
+        focusedIndex -= 1;
+      } else if (key === 'Enter') {
+        event.preventDefault();
+        if (filteredNodes[focusedIndex]) {
+          selectedNodeId = filteredNodes[focusedIndex].id;
+        }
+      } else if (key === 'm') {
+        event.preventDefault();
+        if (filteredNodes[focusedIndex]) {
+          dispatchNodeCollapse(filteredNodes[focusedIndex].id);
+        }
+      }
+    }
+  }
+
+  function handleCliCommand(event) {
+    const command = event.detail.trim().toLowerCase();
+    if (command.startsWith('filter ')) {
+      filter = command.slice(7).toUpperCase() || 'TCIV';
+    } else if (command.startsWith('select ')) {
+      const nodeId = command.slice(7);
+      const idx = nodes.findIndex(n => n.id === nodeId);
+      if (idx !== -1) {
+        selectedNodeId = nodeId;
+        focusedIndex = idx;
+        focusNodeList();
+      }
+    }
+  }
+
+  let collapsedNodes = new Set();
+  function dispatchNodeCollapse(nodeId) {
+    if (collapsedNodes.has(nodeId)) {
+      collapsedNodes.delete(nodeId);
+    } else {
+      collapsedNodes.add(nodeId);
+    }
+    collapsedNodes = new Set(collapsedNodes);
+  }
 </script>
 
 <style>
@@ -45,28 +119,35 @@
     display: flex;
     flex-direction: column;
     height: 100vh;
-    overflow: hidden; /* Important: Prevents outer scrollbar */
+    overflow: hidden;
+    background: #000;
+    color: #0f0;
+    font-family: 'IBM Plex Mono', monospace;
   }
-
   .node-list-container {
-    flex: 1; /* List takes up available space */
-    overflow-y: auto; /* List itself scrolls */
-    padding: 10px; /* Add some padding around the list */
+    flex: 1;
+    overflow-y: auto;
+    outline: none;
   }
-
+  .node-list-container.region-focused {
+    box-shadow: inset 0 0 0 2px #0f0;
+  }
   .cli-container {
-    padding: 0.5rem 1rem;
-    border-top: 1px solid #ccc;
-    background-color: #eee;
-    flex-shrink: 0;
+    border-top: 1px solid #333;
+    background: #111;
+    padding: 0.5rem;
+  }
+  /* svelte-ignore css-unused-selector */
+  .cli-container.region-focused .cli-input {
+    box-shadow: inset 0 0 0 2px #0f0;
   }
 </style>
 
 <div class="page-container">
-  <div class="node-list-container">
-    <NodeList {nodes} {filter} {selectedNodeId} on:select={handleSelect} />
+  <div class="node-list-container" class:region-focused={focusedRegion === 'nodelist'} bind:this={nodeListContainerElement}>
+    <NodeList nodes={filteredNodes} {focusedIndex} {selectedNodeId} {collapsedNodes} />
   </div>
-  <div class="cli-container">
-    <CommandLine on:command={handleCommand} />
+  <div class="cli-container" class:region-focused={focusedRegion === 'cli'}>
+    <CommandLine bind:inputElement={cliInputElement} on:command={handleCliCommand} />
   </div>
 </div>

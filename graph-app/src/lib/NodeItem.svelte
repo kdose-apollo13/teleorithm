@@ -1,21 +1,21 @@
 <script>
-  import { createEventDispatcher, onMount, afterUpdate } from 'svelte';
+  import { createEventDispatcher, afterUpdate } from 'svelte';
 
   export let node;
   export let filter;
-  export let selected = false; // Is this item currently focused via keyboard in NodeList?
-  export let active = false;   // Is this the "globally" active/selected node?
+  export let selected = false; // True if this item is the one NodeList has "focused" via j/k
+  export let active = false;   // True if this item is the globally "activated" node
 
   let collapsed = false;
   const dispatch = createEventDispatcher();
-  let itemElement; // bind:this for the main div
+  let itemElement;
 
-  // When 'selected' (focused by NodeList keyboard nav), this item should be focusable.
-  afterUpdate(() => {
-    if (selected && itemElement) {
-      itemElement.focus();
-    }
-  });
+  // For parent (NodeList) to call via 'm' key
+  export function programmaticToggleCollapse() {
+    collapsed = !collapsed;
+    // Optionally dispatch an event if the parent needs to know about the collapse state change
+    // dispatch('itemcollapsed', { id: node.id, collapsed });
+  }
 
   function shouldShow(type, level) {
     if (!filter) return true;
@@ -45,22 +45,20 @@
     return false;
   }
 
-  function toggleCollapseInternal(event) {
-    event.stopPropagation(); // Prevent click on button from also triggering item click
-    collapsed = !collapsed;
-    dispatch('togglecollapse', { id: node.id, collapsed });
+  function handleItemClick() {
+    dispatch('select', node.id); // Notify parent (NodeList) of activation
   }
 
-  // This is the primary action for the item itself (e.g., making it the "active" node)
-  function handleClick() {
-    dispatch('select', node.id);
+  function handleToggleButtonClick(event) {
+    event.stopPropagation(); // Prevent item click when button is clicked
+    programmaticToggleCollapse();
   }
 
-  // A11y: Keyboard handler for the item itself
+  // If item itself gets focus (e.g. tabbing, if it were made focusable), handle Enter/Space for activation
   function handleItemKeydown(event) {
-    if (event.key === 'Enter' || event.key === ' ') {
+    if (selected && (event.key === 'Enter' || event.key === ' ')) {
       event.preventDefault();
-      handleClick(); // Dispatch 'select'
+      handleItemClick();
     }
   }
 </script>
@@ -72,17 +70,20 @@
     border-radius: 5px;
     padding: 10px;
     cursor: pointer;
-    transition: background-color 0.2s ease;
-    outline: none; 
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+    outline: none;
   }
-  .node-item.selected:focus-visible, /* Combined state for keyboard focus */
-  .node-item:focus-visible { 
-    box-shadow: 0 0 0 2px blue; /* Visible focus outline */
+  .node-item.selected { /* Visual cue for NodeList's internal j/k focus */
     border-color: blue;
+    box-shadow: 0 0 3px rgba(0, 0, 200, 0.4);
   }
-  .node-item.active {
+  .node-item.active { /* Visual cue for the globally selected/active node */
     background-color: #e0e0ff;
-    border-color: #a0a0ff;
+    border-color: #9090ff;
+  }
+  /* If the item itself could be tab-focused (it's -1 now) */
+  .node-item:focus-visible {
+    outline: 2px solid orange; /* Distinct from 'selected' */
   }
   h2 {
     margin-top: 0;
@@ -97,33 +98,12 @@
     font-size: 1.2em;
     cursor: pointer;
     padding: 0.2em 0.5em;
+    color: #333;
   }
-  .metadata {
-    font-size: 0.8rem;
-    color: #666;
-    margin-bottom: 0.5rem;
-    border-bottom: 1px solid #eee;
-    padding-bottom: 0.5rem;
+  .toggle-button:hover {
+    color: #000;
   }
-  .content-items {
-    padding-left: 15px;
-    border-left: 2px solid #eee;
-    margin-top: 10px;
-  }
-  .content-items .content-text { margin-bottom: 0.5em; }
-  .content-items .content-code {
-    background-color: #f4f4f4;
-    padding: 0.5em;
-    border-radius: 4px;
-    overflow-x: auto;
-    margin-bottom: 0.5em;
-  }
-  .content-items img, .content-items video {
-    max-width: 90%;
-    height: auto;
-    display: block;
-    margin-bottom: 0.5em;
-  }
+  .metadata, .content-items { /* Styles from previous version */ }
 </style>
 
 <div
@@ -132,13 +112,14 @@
   class:selected
   class:active
   role="option"
-  aria-selected={active.toString()} tabindex={selected ? 0 : -1}      on:click={handleClick}
-  on:keydown={handleItemKeydown}     >
+  aria-selected={active.toString()}
+  tabindex="-1" on:click={handleItemClick}
+  on:keydown={handleItemKeydown} >
   <h2>
     <span>{node.id}</span>
     <button
       class="toggle-button"
-      on:click={toggleCollapseInternal}
+      on:click={handleToggleButtonClick}
       aria-expanded={!collapsed}
       aria-label="Toggle content for {node.id}"
     >
@@ -160,12 +141,13 @@
           {:else if item.type === 'code'}
             <pre class="content-code"><code>{item.value}</code></pre>
           {:else if item.type === 'image'}
-            <img src={item.value} alt={item.metadata?.altText || `Image content for ${node.id}`} />
+            <img src={item.value} alt={item.metadata?.altText || `Image for ${node.id}`} />
           {:else if item.type === 'video'}
             <video src={item.value} controls>
               <track kind="captions" srclang="en" src={item.metadata?.captionSrc || ""} label={item.metadata?.captionLabel || "English Captions"} />
               Your browser does not support the video tag.
-            </video> {/if}
+            </video>
+          {/if}
         {/if}
       {/each}
     </div>

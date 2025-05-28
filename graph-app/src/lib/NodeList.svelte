@@ -1,106 +1,79 @@
+<!-- src/lib/NodeList.svelte -->
 <script>
-  import NodeItem from './NodeItem.svelte';
-  import { createEventDispatcher, onMount, onDestroy, tick } from 'svelte';
-
   export let nodes = [];
-  export let filter = 'TCIV';
+  export let focusedIndex = 0;
   export let selectedNodeId = null;
+  export let collapsedNodes = new Set();
 
-  let focusedIndex = 0;
-  const dispatch = createEventDispatcher();
-  let listElement; // To bind to the container div
-
-  function handleKeydown(event) {
-    if (!nodes || nodes.length === 0) return;
-
-    let newIndex = focusedIndex;
-
-    if (event.key === 'j') {
-        event.preventDefault(); // Prevent page scroll
-        newIndex = Math.min(focusedIndex + 1, nodes.length - 1);
-    } else if (event.key === 'k') {
-        event.preventDefault(); // Prevent page scroll
-        newIndex = Math.max(focusedIndex - 1, 0);
-    } else if (event.key === 'Enter') {
-        event.preventDefault();
-        dispatch('select', nodes[focusedIndex].id);
-        // Toggle active state in NodeItem via its active prop
-    } else if (event.key === ' ') {
-        event.preventDefault();
-        // We need a way to tell the focused NodeItem to toggle collapse.
-        // This is tricky without direct component refs. We might need
-        // to manage collapse state here or use a different approach.
-        // For now, let's leave this, but acknowledge it needs work.
-        console.log("Space pressed - collapse/expand TBD");
-    }
-
-    if (newIndex !== focusedIndex) {
-        focusedIndex = newIndex;
-        ensureVisible(focusedIndex);
+  function ensureVisible(index) {
+    const item = listElement?.querySelectorAll('.node-item')[index];
+    if (item && typeof item.scrollIntoView === 'function') {
+      item.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
   }
 
-  // Function to scroll the focused item into view
-  async function ensureVisible(index) {
-      await tick(); // Wait for DOM to update
-      const items = listElement?.querySelectorAll('.node-item');
-      if (items && items[index] && (typeof items[index].scrollIntoView === 'function')) {
-          items[index].scrollIntoView({
-              behavior: 'smooth',
-              block: 'nearest', // 'start', 'center', 'end', or 'nearest'
-          });
-      }
+  $: if (nodes.length > 0 && focusedIndex >= 0) {
+    ensureVisible(focusedIndex);
   }
 
-  function handleItemSelect(event) {
-      dispatch('select', event.detail);
-      // Update focusedIndex based on the clicked item's ID
-      focusedIndex = nodes.findIndex(n => n.id === event.detail);
-  }
-
-
-  onMount(() => {
-    window.addEventListener('keydown', handleKeydown);
-    // Set initial focus if a node is selected
-    if (selectedNodeId) {
-        focusedIndex = nodes.findIndex(n => n.id === selectedNodeId);
-        if (focusedIndex === -1) focusedIndex = 0; // Default to first if not found
-    }
-    // Set focus to the list itself so it can receive key events
-    listElement?.focus();
-  });
-
-  onDestroy(() => {
-    window.removeEventListener('keydown', handleKeydown);
-  });
+  let listElement;
 </script>
 
 <style>
-    .node-list {
-        padding: 10px;
-        outline: none; /* Remove default focus outline if desired */
-    }
+  .node-list {
+    padding: 1rem;
+    outline: none;
+  }
+  .node-item {
+    margin-bottom: 1rem;
+    padding: 0.5rem;
+    border: 1px solid #333;
+  }
+  .node-item.selected {
+    background: #0f0;
+    color: #000;
+  }
+  .node-item.active {
+    border-color: #0f0;
+  }
+  .node-item.collapsed .content-text,
+  .node-item.collapsed .content-code {
+    display: none;
+  }
+  .content-text {
+    margin: 0.5rem 0;
+  }
+  .content-code {
+    background: #222;
+    padding: 0.5rem;
+    border-radius: 4px;
+  }
 </style>
 
-<div
-    class="node-list"
-    role="listbox"
-    aria-label="Node List"
-    tabindex="0"
-    bind:this={listElement}
-    on:focus={() => listElement?.focus()}
->
+<div class="node-list" role="listbox" aria-label="Node List" bind:this={listElement} tabindex="0">
   {#if nodes.length > 0}
-      {#each nodes as node, index (node.id)}
-        <NodeItem
-          {node}
-          {filter}
-          selected={index === focusedIndex}
-          active={node.id === selectedNodeId}
-          on:select={handleItemSelect}
-        />
-      {/each}
+    {#each nodes as node, index (node.id)}
+      <div
+        class="node-item"
+        class:selected={index === focusedIndex}
+        class:active={node.id === selectedNodeId}
+        class:collapsed={collapsedNodes.has(node.id)}
+        role="option"
+        aria-selected={index === focusedIndex}
+      >
+        <h2>{node.id}</h2>
+        {#if !collapsedNodes.has(node.id)}
+          {#each node.content as item}
+            {#if item.type === 'text'}
+              <div class="content-text">{@html item.value}</div>
+            {:else if item.type === 'code'}
+              <pre class="content-code"><code>{item.value}</code></pre>
+            {/if}
+          {/each}
+        {/if}
+      </div>
+    {/each}
   {:else}
-      <p>Loading nodes or no nodes found...</p>
+    <p>No nodes found.</p>
   {/if}
 </div>

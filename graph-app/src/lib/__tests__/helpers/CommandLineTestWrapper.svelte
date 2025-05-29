@@ -1,13 +1,12 @@
 <script>
-  import CommandLine from '../../CommandLine.svelte'; // Path to your actual component
+  import CommandLine from '../../CommandLine.svelte';
 
-  // This prop will store the detail of the last dispatched 'command' event.
-  // It's exported so the test can access its value via the component instance.
   export let lastDispatchedCommandDetail = null;
+  export let commandLineInstance = null; // To access CommandLine's exported members if needed
 
   function handleCommandDispatch(event) {
     lastDispatchedCommandDetail = event.detail;
   }
 </script>
 
-<CommandLine on:command={handleCommandDispatch} />
+<CommandLine on:command={handleCommandDispatch} bind:this={commandLineInstance} />

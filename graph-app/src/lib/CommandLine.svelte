@@ -1,29 +1,19 @@
-<!-- src/lib/CommandLine.svelte -->
 <script>
   import { createEventDispatcher } from 'svelte';
-  export let inputElement;
+
+  export let inputElement = null; // For parent to bind if needed (e.g., for focusing)
   let command = '';
   const dispatch = createEventDispatcher();
 
-  function handleSubmit(event) {
-    if (event.key === 'Enter' && command.trim()) {
-      dispatch('command', command.trim());
-      command = '';
-    }
+  function handleSubmit() {
+    // Runtime Debug: Check if this is called
+    console.log('CommandLine.svelte: handleSubmit triggered with command:', command);
+    if (command.trim() === '') return; // Optional: don't dispatch empty commands
+
+    dispatch('command', command);
+    command = ''; // Clear the input
   }
 </script>
-
-<style>
-  .cli-input {
-    width: 100%;
-    padding: 0.5rem;
-    background: #111;
-    color: #0f0;
-    border: 1px solid #333;
-    font-family: 'IBM Plex Mono', monospace;
-    box-sizing: border-box;
-  }
-</style>
 
 <form on:submit|preventDefault={handleSubmit}>
   <input
@@ -32,5 +22,6 @@
     class="cli-input"
     placeholder="Enter command..."
     bind:value={command}
+    aria-label="Command input"
   />
 </form>

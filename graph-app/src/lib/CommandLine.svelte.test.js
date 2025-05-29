@@ -1,22 +1,23 @@
-import { render, fireEvent, cleanup, screen } from '@testing-library/svelte'; // screen is useful
-import { describe, it, expect, afterEach } from 'vitest';
+import { render, fireEvent, cleanup, screen } from '@testing-library/svelte';
+import { describe, it, expect, afterEach, vi } from 'vitest';
+import { tick } from 'svelte'; // Import tick for Svelte 5 reactivity cycles if needed
+
 import CommandLineTestWrapper from './__tests__/helpers/CommandLineTestWrapper.svelte';
 
 afterEach(cleanup);
 
 describe('CommandLine component (via Test Wrapper)', () => {
-  it('dispatches the correct command detail on submit and clears input', async () => {
+  it('dispatches the correct command detail on form submit and clears input', async () => {
+    // `component` is the instance of CommandLineTestWrapper
     const { component, container } = render(CommandLineTestWrapper);
 
-    // Use getByPlaceholderText to find the input element reliably
+    // Get the input element rendered by CommandLine.svelte (inside the wrapper)
     const inputElement = screen.getByPlaceholderText('Enter command...');
-    expect(inputElement).toBeInTheDocument(); // Verify input element is found
+    expect(inputElement).toBeInTheDocument();
 
-    // Get the form element by querying within the rendered container
-    // This is robust as CommandLine.svelte defines one form.
-    const formElement = container.querySelector('form');
-    expect(formElement).toBeInTheDocument(); // Verify form element is found
-    // Sanity check that the input is within the form
+    // Get the form element that contains the input
+    const formElement = container.querySelector('form'); // Assumes one form in wrapper
+    expect(formElement).toBeInTheDocument();
     expect(formElement.contains(inputElement)).toBe(true);
 
 
@@ -24,33 +25,34 @@ describe('CommandLine component (via Test Wrapper)', () => {
     await fireEvent.input(inputElement, { target: { value: testCommand } });
     expect(inputElement.value).toBe(testCommand);
 
-    // Simulate form submission
+    // Trigger form submission
+    // fireEvent.submit should work if the form and its on:submit are correctly set up.
     await fireEvent.submit(formElement);
 
-    // Access the captured command from the wrapper's exported prop
+    // Svelte 5 updates are generally synchronous with fireEvent, but for event dispatch
+    // and wrapper updates, a tick might sometimes be needed in complex JSDOM scenarios.
+    // Try without it first, add if `lastDispatchedCommandDetail` is still undefined.
+    // await tick();
+
+    // Assert that the wrapper's prop was updated by the dispatched event
     expect(component.lastDispatchedCommandDetail).toBe(testCommand);
 
     // Assert that the input field (inside CommandLine.svelte) was cleared
     expect(inputElement.value).toBe('');
   });
 
-  it('clears the input after submitting (standalone check)', async () => {
+  it('clears the input after submitting (alternative trigger: Enter key)', async () => {
     const { component, container } = render(CommandLineTestWrapper);
-
     const inputElement = screen.getByPlaceholderText('Enter command...');
-    expect(inputElement).toBeInTheDocument();
 
-    const formElement = container.querySelector('form');
-    expect(formElement).toBeInTheDocument();
-    expect(formElement.contains(inputElement)).toBe(true);
-
-
-    const anotherCommand = 'test command';
+    const anotherCommand = 'test command with enter';
     await fireEvent.input(inputElement, { target: { value: anotherCommand } });
-    await fireEvent.submit(formElement);
+
+    // Simulate pressing Enter on the input field
+    await fireEvent.keyDown(inputElement, { key: 'Enter', code: 'Enter', keyCode: 13 });
+    // await tick(); // If needed
 
     expect(inputElement.value).toBe('');
-    // Optionally, also check the dispatched command here if the wrapper is used
     expect(component.lastDispatchedCommandDetail).toBe(anotherCommand);
   });
 });

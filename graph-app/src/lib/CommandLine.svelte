@@ -1,17 +1,16 @@
+<!-- src/lib/CommandLine.svelte -->
 <script>
   import { createEventDispatcher } from 'svelte';
 
-  export let inputElement = null; // For parent to bind if needed (e.g., for focusing)
+  export let inputElement;
   let command = '';
   const dispatch = createEventDispatcher();
 
   function handleSubmit() {
-    // Runtime Debug: Check if this is called
-    console.log('CommandLine.svelte: handleSubmit triggered with command:', command);
-    if (command.trim() === '') return; // Optional: don't dispatch empty commands
-
-    dispatch('command', command);
-    command = ''; // Clear the input
+    if (command.trim()) {
+      dispatch('command', command);
+      command = '';
+    }
   }
 </script>
 
@@ -25,3 +24,14 @@
     aria-label="Command input"
   />
 </form>
+
+<style>
+  .cli-input {
+    width: 100%;
+    background: #111;
+    color: #0f0;
+    border: none;
+    padding: 0.5rem;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+</style>

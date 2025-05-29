@@ -4,12 +4,12 @@
     {
       "type": "text",
       "value": "<h1>Intro to Linux</h1><p>Learn basic commands...</p>",
-      "metadata": { "level": "beginner" }
+      "metadata": { "level": "1" }
     },
     {
       "type": "code",
       "value": "ls -la",
-      "metadata": { "level": "beginner" }
+      "metadata": { "level": "2" }
     }
   ],
   "metadata": { "author": "0x123", "timestamp": "2025-05-27T23:55:00Z", "tags": ["linux", "sysadmin"] }

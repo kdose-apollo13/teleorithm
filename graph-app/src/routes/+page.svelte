@@ -4,6 +4,7 @@
   import '../app.css';
   import NodeList from '$lib/NodeList.svelte';
   import CommandLine from '$lib/CommandLine.svelte';
+  import { shouldShow } from '$lib/filterUtils.js';
 
   let nodes = [];
   let selectedNodeId = null;
@@ -12,87 +13,73 @@
   let focusedRegion = 'cli';
   let cliInputElement;
   let nodeListContainerElement;
+  let collapsedNodes = new Set();
 
-  $: filteredNodes = filter === 'TCIV' ? nodes : nodes.filter(n => n.content.some(c => c.metadata?.level === filter));
+  // Filter nodes that have at least one content item matching the filter
+  $: filteredNodes = nodes.filter(n => n.content.some(c => shouldShow(filter, c.type, c.metadata?.level)));
 
   onMount(async () => {
-    try {
-      nodes = await window.api.listNodes();
-      if (nodes.length > 0) focusedIndex = 0;
-    } catch (error) {
-      console.error('Failed to load nodes:', error);
-      nodes = [];
+    nodes = await window.api.listNodes() || [];
+    if (nodes.length > 0) focusedIndex = 0;
+    if (cliInputElement) {
+      cliInputElement.focus();
+      focusedRegion = 'cli';
     }
     window.addEventListener('keydown', handleKeydown, true);
-    const focusInterval = setInterval(() => {
-      if (cliInputElement) {
-        focusCli();
-        clearInterval(focusInterval);
-      }
-    }, 50);
-    return () => {
-      clearInterval(focusInterval);
-      window.removeEventListener('keydown', handleKeydown, true);
-    };
+    return () => window.removeEventListener('keydown', handleKeydown, true);
   });
 
   function focusCli() {
     focusedRegion = 'cli';
     nodeListContainerElement?.blur();
-    if (cliInputElement) {
-      cliInputElement.focus();
-      console.log('Focus: CLI, Active:', document.activeElement?.className);
-    }
+    cliInputElement?.focus();
   }
 
   function focusNodeList() {
     focusedRegion = 'nodelist';
     cliInputElement?.blur();
     nodeListContainerElement?.focus();
-    console.log('Focus: NodeList, Active:', document.activeElement?.className);
   }
 
   function handleKeydown(event) {
     const { key } = event;
-    console.log(`Key: ${key}, Region: ${focusedRegion}, Active: ${document.activeElement?.className}`);
-
-    if (focusedRegion === 'cli') {
-      if (key === 'Escape') {
-        event.preventDefault();
-        event.stopPropagation();
-        focusNodeList();
-      }
+    if (focusedRegion === 'cli' && key === 'Escape') {
+      event.preventDefault();
+      focusNodeList();
     } else if (focusedRegion === 'nodelist') {
-      if (key === ';') {
-        event.preventDefault();
-        event.stopPropagation();
-        focusCli();
-      } else if (key === 'j' && focusedIndex < filteredNodes.length - 1) {
-        event.preventDefault();
-        focusedIndex += 1;
-      } else if (key === 'k' && focusedIndex > 0) {
-        event.preventDefault();
-        focusedIndex -= 1;
-      } else if (key === 'Enter') {
-        event.preventDefault();
-        if (filteredNodes[focusedIndex]) {
-          selectedNodeId = filteredNodes[focusedIndex].id;
-        }
-      } else if (key === 'm') {
-        event.preventDefault();
-        if (filteredNodes[focusedIndex]) {
-          dispatchNodeCollapse(filteredNodes[focusedIndex].id);
-        }
+      switch (key) {
+        case ';':
+          event.preventDefault();
+          focusCli();
+          break;
+        case 'j':
+          if (focusedIndex < filteredNodes.length - 1) {
+            event.preventDefault();
+            focusedIndex += 1;
+          }
+          break;
+        case 'k':
+          if (focusedIndex > 0) {
+            event.preventDefault();
+            focusedIndex -= 1;
+          }
+          break;
+        case 'Enter':
+          event.preventDefault();
+          if (filteredNodes[focusedIndex]) selectedNodeId = filteredNodes[focusedIndex].id;
+          break;
+        case 'm':
+          event.preventDefault();
+          if (filteredNodes[focusedIndex]) toggleCollapse(filteredNodes[focusedIndex].id);
+          break;
       }
     }
   }
 
   function handleCliCommand(event) {
     const command = event.detail.trim().toLowerCase();
-    console.log('CLI Command:', command);
     if (command.startsWith('filter ')) {
-      const filterValue = command.slice(7).trim().toUpperCase();
-      filter = filterValue || 'TCIV';
+      filter = command.slice(7).trim().toUpperCase() || 'TCIV';
     } else if (command.startsWith('select ')) {
       const nodeId = command.slice(7).trim();
       const idx = nodes.findIndex(n => n.id === nodeId);
@@ -103,24 +90,13 @@
       }
     } else if (command.startsWith('collapse ')) {
       const nodeId = command.slice(9).trim();
-      console.log('Collapse Node ID:', nodeId);
-      if (nodes.some(n => n.id === nodeId)) {
-        dispatchNodeCollapse(nodeId);
-      } else {
-        console.log('Node not found:', nodeId);
-      }
+      if (nodes.some(n => n.id === nodeId)) toggleCollapse(nodeId);
     }
   }
 
-  let collapsedNodes = new Set();
-  function dispatchNodeCollapse(nodeId) {
-    console.log('Collapsing:', nodeId);
-    if (collapsedNodes.has(nodeId)) {
-      collapsedNodes.delete(nodeId);
-    } else {
-      collapsedNodes.add(nodeId);
-    }
-    collapsedNodes = new Set(collapsedNodes);
+  function toggleCollapse(nodeId) {
+    collapsedNodes.has(nodeId) ? collapsedNodes.delete(nodeId) : collapsedNodes.add(nodeId);
+    collapsedNodes = new Set(collapsedNodes); // Trigger reactivity
   }
 </script>
 
@@ -154,7 +130,15 @@
 
 <div class="page-container">
   <div class="node-list-container" class:region-focused={focusedRegion === 'nodelist'} bind:this={nodeListContainerElement}>
-    <NodeList nodes={filteredNodes} {focusedIndex} {selectedNodeId} {collapsedNodes} />
+    <NodeList
+      nodes={filteredNodes}
+      {focusedIndex}
+      {selectedNodeId}
+      {collapsedNodes}
+      {toggleCollapse}
+      setSelectedNodeId={(id) => selectedNodeId = id}
+      {filter}
+    />
   </div>
   <div class="cli-container" class:region-focused={focusedRegion === 'cli'}>
     <CommandLine bind:inputElement={cliInputElement} on:command={handleCliCommand} />

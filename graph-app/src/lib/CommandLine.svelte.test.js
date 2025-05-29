@@ -2,7 +2,7 @@
 import { render, fireEvent, cleanup, screen } from '@testing-library/svelte';
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import { tick } from 'svelte';
-import CommandLineTestWrapper from './__tests__/helpers/CommandLineTestWrapper.svelte';
+import CommandLineTestWrapper from '$tests/helpers/CommandLineTestWrapper.svelte';
 
 afterEach(cleanup);
 

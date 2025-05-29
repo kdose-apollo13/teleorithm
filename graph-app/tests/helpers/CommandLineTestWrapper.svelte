@@ -1,5 +1,5 @@
 <script>
-  import CommandLine from '../../CommandLine.svelte';
+  import CommandLine from '$lib/CommandLine.svelte';
 
   // This prop will be a callback function provided by the test.
   // It's a function, so its default is a no-op function.

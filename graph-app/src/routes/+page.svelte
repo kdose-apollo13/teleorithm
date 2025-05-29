@@ -24,7 +24,6 @@
       nodes = [];
     }
     window.addEventListener('keydown', handleKeydown, true);
-    // Retry focus until element is ready
     const focusInterval = setInterval(() => {
       if (cliInputElement) {
         focusCli();
@@ -90,21 +89,32 @@
 
   function handleCliCommand(event) {
     const command = event.detail.trim().toLowerCase();
+    console.log('CLI Command:', command);
     if (command.startsWith('filter ')) {
-      filter = command.slice(7).toUpperCase() || 'TCIV';
+      const filterValue = command.slice(7).trim().toUpperCase();
+      filter = filterValue || 'TCIV';
     } else if (command.startsWith('select ')) {
-      const nodeId = command.slice(7);
+      const nodeId = command.slice(7).trim();
       const idx = nodes.findIndex(n => n.id === nodeId);
       if (idx !== -1) {
         selectedNodeId = nodeId;
         focusedIndex = idx;
         focusNodeList();
       }
+    } else if (command.startsWith('collapse ')) {
+      const nodeId = command.slice(9).trim();
+      console.log('Collapse Node ID:', nodeId);
+      if (nodes.some(n => n.id === nodeId)) {
+        dispatchNodeCollapse(nodeId);
+      } else {
+        console.log('Node not found:', nodeId);
+      }
     }
   }
 
   let collapsedNodes = new Set();
   function dispatchNodeCollapse(nodeId) {
+    console.log('Collapsing:', nodeId);
     if (collapsedNodes.has(nodeId)) {
       collapsedNodes.delete(nodeId);
     } else {
@@ -137,8 +147,7 @@
     background: #111;
     padding: 0.5rem;
   }
-  /* svelte-ignore css-unused-selector */
-  .cli-container.region-focused .cli-input {
+  .cli-container.region-focused {
     box-shadow: inset 0 0 0 2px #0f0;
   }
 </style>

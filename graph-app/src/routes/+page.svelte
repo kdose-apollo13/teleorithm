@@ -15,7 +15,6 @@
   let nodeListContainerElement;
   let collapsedNodes = new Set();
 
-  // Filter nodes that have at least one content item matching the filter
   $: filteredNodes = nodes.filter(n => n.content.some(c => shouldShow(filter, c.type, c.metadata?.level)));
 
   onMount(async () => {
@@ -68,7 +67,7 @@
           event.preventDefault();
           if (filteredNodes[focusedIndex]) selectedNodeId = filteredNodes[focusedIndex].id;
           break;
-        case 'm':
+        case ' ': // Changed from 'm' to spacebar
           event.preventDefault();
           if (filteredNodes[focusedIndex]) toggleCollapse(filteredNodes[focusedIndex].id);
           break;
@@ -96,7 +95,7 @@
 
   function toggleCollapse(nodeId) {
     collapsedNodes.has(nodeId) ? collapsedNodes.delete(nodeId) : collapsedNodes.add(nodeId);
-    collapsedNodes = new Set(collapsedNodes); // Trigger reactivity
+    collapsedNodes = new Set(collapsedNodes);
   }
 </script>
 
@@ -106,25 +105,30 @@
     flex-direction: column;
     height: 100vh;
     overflow: hidden;
-    background: #000;
-    color: #0f0;
+    background: #1a1a1a; /* Dark background for neon contrast */
+    color: #80ffea; /* Pastel cyan text */
     font-family: 'IBM Plex Mono', monospace;
   }
   .node-list-container {
     flex: 1;
     overflow-y: auto;
     outline: none;
-  }
-  .node-list-container.region-focused {
-    box-shadow: inset 0 0 0 2px #0f0;
-  }
-  .cli-container {
-    border-top: 1px solid #333;
-    background: #111;
+    background: #2a2a2a;
+    border-radius: 8px;
+    margin: 1rem;
     padding: 0.5rem;
   }
+  .node-list-container.region-focused {
+    box-shadow: 0 0 8px #ff80bf; /* Pastel pink glow */
+  }
+  .cli-container {
+    border-top: 2px solid #b3ff99; /* Pastel lime border */
+    background: #2a2a2a;
+    padding: 1rem;
+    border-radius: 0 0 8px 8px;
+  }
   .cli-container.region-focused {
-    box-shadow: inset 0 0 0 2px #0f0;
+    box-shadow: 0 0 8px #80ffea; /* Pastel cyan glow */
   }
 </style>
 

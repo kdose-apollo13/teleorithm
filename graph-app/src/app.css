@@ -1,8 +1,108 @@
 /* src/app.css */
+:root {
+  --primary-color: #007bff;
+  --secondary-color: #6c757d;
+  --background-color: #f0f2f5;
+  --surface-color: #ffffff;
+  --text-color: #212529;
+  --text-muted-color: #6c757d;
+  --border-color: #dee2e6;
+  --border-color-light: #f1f3f5;
+  --container-bg: #fdfdfd;
+
+  --item-bg: #ffffff;
+  --item-bg-subtle: #f8f9fa;
+  --code-bg: #e9ecef;
+
+  --selected-border-color: var(--primary-color);
+  --selected-shadow-color: rgba(0, 123, 255, 0.3);
+  --active-bg-color: #e7f3ff;
+
+  --font-family-sans-serif: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --font-family-monospace: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
 html,
 body {
   margin: 0;
   padding: 0;
   height: 100%;
   overflow: hidden;
+  font-family: var(--font-family-sans-serif);
+  background-color: var(--background-color);
+  color: var(--text-color);
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+/* Basic Resets and Global Styles */
+* {
+  box-sizing: border-box;
+}
+
+/* Make the overall app container take full height and use flex */
+/* Assuming your +page.svelte has a main container div */
+:global(#app-container) { /* You might need to add this ID to your root div in +page.svelte */
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+/* General container styling (can be overridden) */
+.container {
+  padding: 1rem;
+  background-color: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: 0.25rem;
+  margin: 0.5rem;
+}
+
+/* Style for the main regions (CLI, NodeList, NodeView) */
+/* These are examples, assuming you have these classes on your layout regions in +page.svelte */
+:global(.cli-region),
+:global(.nodelist-region),
+:global(.nodeview-region) {
+  border: 1px solid var(--border-color);
+  background-color: var(--surface-color);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+:global(.region-focused) {
+  border-color: var(--primary-color) !important; /* Use !important carefully */
+  box-shadow: 0 0 8px var(--primary-color) !important;
+}
+
+/* Example of how you might structure your app layout in +page.svelte */
+/*
+<div id="app-container">
+  <div class="main-layout">
+    <div class="nodelist-region"> <NodeList ... /> </div>
+    <div class="nodeview-region">  Node View Here  </div>
+  </div>
+  <div class="cli-region"> <CommandLine ... /> </div>
+</div>
+*/
+
+/*
+.main-layout {
+  display: flex;
+  flex-grow: 1;
+  overflow: hidden;
+}
+.nodelist-region { flex: 1; overflow-y: auto; }
+.nodeview-region { flex: 2; overflow-y: auto; padding: 1em; }
+.cli-region { flex-shrink: 0; }
+*/
+
+/* Remove default padding/margin from lists if you're using divs as list items */
+:global(div[role="listbox"]) {
+  padding: 0;
+  margin: 0;
+}
+:global(div[role="option"]) {
+  /* styles for items if needed, mostly handled in NodeItem.svelte */
+}
+
+pre, code {
+  font-family: var(--font-family-monospace);
 }

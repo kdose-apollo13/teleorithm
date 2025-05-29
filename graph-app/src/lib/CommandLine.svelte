@@ -25,11 +25,12 @@
   }
 </style>
 
-<input
-  type="text"
-  class="cli-input"
-  placeholder="Enter command..."
-  bind:value={command}
-  bind:this={inputElement}
-  on:keydown={handleSubmit}
-/>
+<form on:submit|preventDefault={handleSubmit}>
+  <input
+    bind:this={inputElement}
+    type="text"
+    class="cli-input"
+    placeholder="Enter command..."
+    bind:value={command}
+  />
+</form>

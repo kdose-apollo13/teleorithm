@@ -1,44 +1,58 @@
 <script>
-  import NodeItem from './NodeItem.svelte'; // Import the new component
+  import NodeItem from './NodeItem.svelte';
 
   export let nodes = [];
-  export let focusedIndex = -1;
-  export let selectedNodeId = null; // Can be a single ID
-  export let collapsedNodes = new Set(); // Set of IDs
+  // Ensure this prop name matches what's passed from +page.svelte
+  export let focusedNodeIndex = -1; 
+  export let selectedNodeIds = new Set();
+  export let collapsedNodes = new Set();
+  
+  export let activeFilters = {};
+  export let getFilteredContent;
 
-  // If you intend to support multiple selected nodes (as per Shift+j/k discussion)
-  // you might want to change selectedNodeId to a Set:
-  // export let selectedNodeIds = new Set();
 </script>
 
-<div class="node-list-container" role="listbox" aria-label="Node List">
+<div
+  class="node-list-container"
+  role="listbox"
+  aria-label="Node List"
+  tabindex="-1"
+  aria-activedescendant={ (nodes.length > 0 && focusedNodeIndex > -1 && nodes[focusedNodeIndex]) ? nodes[focusedNodeIndex].id : undefined }
+>
   {#if nodes.length === 0}
     <p>No nodes loaded.</p>
   {:else}
     {#each nodes as node, index (node.id)}
-      <NodeItem
-        {node}
-        isSelected={index === focusedIndex}
-        isActive={node.id === selectedNodeId}
-        isCollapsed={collapsedNodes.has(node.id)}
-        aria-selected={index === focusedIndex}
-      />
-      {/each}
+      <div id={node.id} role="option" aria-selected={selectedNodeIds.has(node.id)}>
+        <NodeItem
+          {node}
+          isSelected={index === focusedNodeIndex}
+          isActive={selectedNodeIds.has(node.id)}
+          isCollapsed={collapsedNodes.has(node.id)}
+          displayContent={getFilteredContent(node.id, node.content || [])}
+          isNodeListFocused={true} 
+        />
+      </div>
+    {/each}
   {/if}
 </div>
 
 <style>
+  /* ... styles remain the same as previous response ... */
   .node-list-container {
-    padding: 1em;
-    background-color: var(--container-bg, #f9f9f9);
+    padding: 0.5em;
+    background-color: var(--container-bg, #fdfdfd);
     height: 100%;
     overflow-y: auto;
-    border: 1px solid var(--border-color, #ccc);
-    border-radius: 4px;
+    border-radius: var(--border-radius, 4px);
   }
-
+  .node-list-container:focus-visible {
+    /* Outline typically handled by .region-focused if parent has it */
+  }
   .node-list-container p {
     text-align: center;
     color: var(--text-muted-color, #777);
+    padding: 1em;
   }
 </style>
+

@@ -1,0 +1,7 @@
+/* In graph-app/src/app.css */
+:global(#app-container) { /* Or ensure this ID is on your root layout div in +page.svelte */
+  display: flex;
+  flex-direction: column;
+  height: 100vh; /* Full viewport height */
+  overflow: hidden; /* Optional: if you want to prevent top-level scroll */
+}

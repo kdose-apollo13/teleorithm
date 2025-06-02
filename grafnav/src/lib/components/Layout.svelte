@@ -5,22 +5,29 @@
   import NodeList from './NodeList.svelte';
   import CliBar from './CliBar.svelte';
   import StatusBar from './StatusBar.svelte';
-  import { appState } from '$lib/stores/appState';
-  import { statusEvents } from '$lib/stores/statusEvents';
+  import { appState, graphData, statusEvents } from '$lib/stores';
 
-  // Sections for navigation
   const sections = ['graph-viz', 'node-list', 'cli-bar'];
-  let currentSectionIndex = -1; // -1 for section-level focus
+  let currentSectionIndex = -1; // -1 for no section focus
+  let lastSectionIndex = -1; // Track last section for Esc
 
   function toggleSection(section) {
     appState.update(state => ({
       ...state,
       [section]: !state[section]
     }));
+    statusEvents.update(events => [
+      ...events,
+      `Toggled ${section}: ${!$appState[section] ? 'expanded' : 'collapsed'} at ${new Date().toLocaleTimeString()}`
+    ]);
   }
 
   function handleNodeSelected(event) {
-    appState.update(state => ({ ...state, selectedNode: event.detail.nodeId }));
+    appState.update(state => ({
+      ...state,
+      selectedNode: event.detail.nodeId,
+      selectedNodeIndex: $graphData.nodes.findIndex(n => n.id === event.detail.nodeId)
+    }));
     statusEvents.update(events => [
       ...events,
       `Node selected: ${event.detail.nodeId} at ${new Date().toLocaleTimeString()}`
@@ -41,7 +48,6 @@
     ]);
   }
 
-  // Key navigation
   function handleKeydown(event) {
     const key = event.key;
     statusEvents.update(events => [
@@ -49,19 +55,30 @@
       `Key: ${key} at ${new Date().toLocaleTimeString()}`
     ]);
 
-    if (key === 'j') {
-      // Move down
-      currentSectionIndex = Math.min(currentSectionIndex + 1, sections.length - 1);
-      appState.update(state => ({ ...state, focusedSection: sections[currentSectionIndex] }));
-    } else if (key === 'k') {
-      // Move up
-      currentSectionIndex = Math.max(currentSectionIndex - 1, -1);
+    if (key === 'j' || key === 'k') {
+      if ($appState.focusedSection === 'node-list' && !$appState.nodeListCollapsed) {
+        const nodeCount = $graphData.nodes.length;
+        if (nodeCount > 0) {
+          appState.update(state => {
+            let newIndex = state.selectedNodeIndex;
+            if (key === 'j') newIndex = Math.min(newIndex + 1, nodeCount - 1);
+            else if (key === 'k') newIndex = Math.max(newIndex - 1, 0);
+            return { ...state, selectedNodeIndex: newIndex };
+          });
+          return;
+        }
+      }
+      // Section navigation
+      if (key === 'j') currentSectionIndex = Math.min(currentSectionIndex + 1, sections.length - 1);
+      else if (key === 'k') currentSectionIndex = Math.max(currentSectionIndex - 1, -1);
+      if (currentSectionIndex !== -1) lastSectionIndex = currentSectionIndex;
       appState.update(state => ({
         ...state,
-        focusedSection: currentSectionIndex === -1 ? null : sections[currentSectionIndex]
+        focusedSection: currentSectionIndex === -1 ? null : sections[currentSectionIndex],
+        selectedNodeIndex: -1 // Reset node selection when changing sections
       }));
     } else if (key === 'i') {
-      // Enter section
+      event.preventDefault(); // Prevent 'i' from typing
       if (currentSectionIndex >= 0) {
         const sectionEl = document.querySelector(`.${sections[currentSectionIndex]}`);
         if (sectionEl) {
@@ -70,15 +87,36 @@
         }
       }
     } else if (key === 'Escape') {
-      // Return to section-level focus
-      currentSectionIndex = -1;
-      appState.update(state => ({ ...state, focusedSection: null }));
+      currentSectionIndex = lastSectionIndex;
+      appState.update(state => ({
+        ...state,
+        focusedSection: currentSectionIndex === -1 ? null : sections[currentSectionIndex],
+        selectedNodeIndex: -1
+      }));
+      document.activeElement?.blur();
     } else if (key === ';') {
-      // Focus CLI
+      event.preventDefault();
       currentSectionIndex = sections.indexOf('cli-bar');
+      lastSectionIndex = currentSectionIndex;
       appState.update(state => ({ ...state, focusedSection: 'cli-bar' }));
       const cliInput = document.querySelector('.cli-bar input');
       if (cliInput) cliInput.focus();
+    } else if (key === ' ') {
+      event.preventDefault(); // Prevent scrolling
+      if ($appState.focusedSection === 'graph-viz') {
+        toggleSection('graphVizCollapsed');
+      } else if ($appState.focusedSection === 'node-list') {
+        toggleSection('nodeListCollapsed');
+      } else if ($appState.selectedNodeIndex >= 0) {
+        // Node toggle (handled in NodeItem)
+        const nodeId = $graphData.nodes[$appState.selectedNodeIndex]?.id;
+        if (nodeId) {
+          statusEvents.update(events => [
+            ...events,
+            `Toggled node ${nodeId} at ${new Date().toLocaleTimeString()}`
+          ]);
+        }
+      }
     }
   }
 
@@ -89,75 +127,110 @@
 </script>
 
 <div class="layout">
-  <!-- Graph Viz Section -->
-  <button class="toggle-button" on:click={() => toggleSection('graphVizCollapsed')}>
-    {$appState.graphVizCollapsed ? 'Show' : 'Hide'} Graph
-  </button>
-  {#if !$appState.graphVizCollapsed}
-    <section class="graph-viz" class:active={$appState.focusedSection === 'graph-viz'}>
-      <GraphViz {appState} on:nodeSelected={handleNodeSelected} />
+  <!-- Top Header Bar -->
+  <div class="header-bar">
+    <button
+      class="header-button"
+      class:active={$appState.focusedSection === 'graph-viz'}
+      on:click={() => toggleSection('graphVizCollapsed')}
+    >
+      {$appState.graphVizCollapsed ? 'Show' : 'Hide'} GraphViz
+    </button>
+    <button
+      class="header-button"
+      class:active={$appState.focusedSection === 'node-list'}
+      on:click={() => toggleSection('nodeListCollapsed')}
+    >
+      {$appState.nodeListCollapsed ? 'Show' : 'Hide'} NodeList
+    </button>
+  </div>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    {#if !$appState.graphVizCollapsed}
+      <section class="graph-viz" class:active={$appState.focusedSection === 'graph-viz'}>
+        <GraphViz {appState} on:nodeSelected={handleNodeSelected} />
+      </section>
+    {/if}
+    {#if !$appState.nodeListCollapsed}
+      <section class="node-list" class:active={$appState.focusedSection === 'node-list'}>
+        <NodeList
+          {appState}
+          on:filterChange={handleFilterChange}
+          on:nodeSelected={handleNodeSelected}
+        />
+      </section>
+    {/if}
+  </div>
+
+  <!-- Bottom Wrapper -->
+  <div class="bottom-wrapper">
+    <section class="cli-bar" class:active={$appState.focusedSection === 'cli-bar'}>
+      <CliBar />
     </section>
-  {/if}
-
-  <!-- Node List Section -->
-  <button class="toggle-button" on:click={() => toggleSection('nodeListCollapsed')}>
-    {$appState.nodeListCollapsed ? 'Show' : 'Hide'} Node List
-  </button>
-  {#if !$appState.nodeListCollapsed}
-    <section class="node-list" class:active={$appState.focusedSection === 'node-list'}>
-      <NodeList
-        {appState}
-        on:filterChange={handleFilterChange}
-        on:nodeSelected={handleNodeSelected}
-      />
+    <section class="status-bar">
+      <StatusBar />
     </section>
-  {/if}
-
-  <!-- CLI Bar -->
-  <section class="cli-bar" class:active={$appState.focusedSection === 'cli-bar'}>
-    <CliBar />
-  </section>
-
-  <!-- Status Bar -->
-  <section class="status-bar" class:active={$appState.focusedSection === 'status-bar'}>
-    <StatusBar {statusEvents} />
-  </section>
+  </div>
 </div>
 
 <style>
   .layout {
     display: flex;
     flex-direction: column;
-    height: 100vh;
+    min-height: 100vh;
     width: 100%;
   }
-  .graph-viz, .node-list {
-    flex: 1;
-    overflow: auto;
-    border: 1px solid #ccc;
-  }
-  .cli-bar, .status-bar {
-    flex: 0 0 auto;
-    border: 1px solid #ccc;
-  }
-  .active {
-    border: 1px solid #00008b; /* Dark blue when focused */
-  }
-  .toggle-button {
-    width: 100%;
+  .header-bar {
+    display: flex;
+    flex-direction: column;
     padding: 5px;
     background: #f0f0f0;
+    border-bottom: 1px solid #ccc;
+    position: fixed;
+    top: 0;
+    width: 100%;
+    z-index: 20;
+  }
+  .header-button {
+    width: 100%;
+    padding: 10px;
+    background: #e0e0e0;
     border: 1px solid #ccc;
+    cursor: pointer;
+    margin-bottom: 2px;
     text-align: left;
   }
-  .layout {
-    justify-content: space-between;
+  .header-button.active {
+    border: 1px solid #00008b;
+    background: #d0d0ff;
   }
-  .cli-bar, .status-bar {
-    position: sticky;
+  .main-content {
+    flex: 1;
+    margin-top: 80px; /* Space for header-bar */
+    margin-bottom: 150px; /* Space for bottom-wrapper */
+    overflow-y: auto;
+  }
+  .graph-viz, .node-list {
+    border: 1px solid #ccc;
+    margin: 5px;
+  }
+  .bottom-wrapper {
+    position: fixed;
     bottom: 0;
+    width: 100%;
     z-index: 10;
     background: #fff;
   }
+  .cli-bar {
+    border: 1px solid #ccc;
+    z-index: 12;
+  }
+  .status-bar {
+    border: 1px solid #ccc;
+    z-index: 11;
+  }
+  .active {
+    border: 1px solid #00008b;
+  }
 </style>
-

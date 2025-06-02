@@ -1,6 +1,6 @@
 <!-- src/lib/components/CliBar.svelte -->
 <script>
-  import { statusEvents } from '../stores/statusEvents';
+  import { statusEvents } from '$lib/stores/statusEvents';
   let inputValue = '';
 
   function handleInput(event) {
@@ -29,6 +29,7 @@
     width: 100%;
     padding: 10px;
     background: #f8f8f8;
+    border-top: 1px solid #ccc;
   }
   input {
     width: 100%;

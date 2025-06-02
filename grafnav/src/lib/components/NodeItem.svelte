@@ -19,33 +19,41 @@
   function selectNode() {
     dispatch('nodeSelected', { nodeId: node.id });
   }
+
+  function toggleExpanded() {
+    expanded = !expanded;
+    dispatch('statusEvents', {
+      message: `Node ${node.id} ${expanded ? 'expanded' : 'collapsed'} at ${new Date().toLocaleTimeString()}`
+    });
+  }
 </script>
 
 <div class="node-item">
-  <div class="header">
-    <h3>{node.id}</h3>
-    <p>{node.metadata}</p>
-    <button on:click={() => expanded = !expanded}>
-      {expanded ? 'Collapse' : 'Expand'}
+  <div class="node-header" on:click={toggleExpanded}>
+    <button>
+      {expanded ? 'Collapse' : 'Expand'} {node.id}
     </button>
-    <button on:click={selectNode}>Select Node</button>
-    <select on:change={e => updateFilters(e.target.value, $appState.filters.level)}>
-      <option value="">All Types</option>
-      <option value="Text">Text</option>
-      <option value="Code">Code</option>
-      <option value="Img">Img</option>
-      <option value="Vid">Vid</option>
-    </select>
-    <select on:change={e => updateFilters($appState.filters.type, parseInt(e.target.value))}>
-      <option value="">All Levels</option>
-      <option value="1">Level 1</option>
-      <option value="2">Level 2</option>
-      <option value="3">Level 3</option>
-    </select>
+    <span>{node.metadata}</span>
   </div>
 
   {#if expanded}
-    <div class="body">
+    <div class="node-body">
+      <div class="controls">
+        <button on:click={selectNode}>Select Node</button>
+        <select on:change={e => updateFilters(e.target.value, $appState.filters.level)}>
+          <option value="">All Types</option>
+          <option value="Text">Text</option>
+          <option value="Code">Code</option>
+          <option value="Img">Img</option>
+          <option value="Vid">Vid</option>
+        </select>
+        <select on:change={e => updateFilters($appState.filters.type, parseInt(e.target.value))}>
+          <option value="">All Levels</option>
+          <option value="1">Level 1</option>
+          <option value="2">Level 2</option>
+          <option value="3">Level 3</option>
+        </select>
+      </div>
       <p>Filtered Items:</p>
       {#each filteredItems as item}
         <div class="item {item.type.toLowerCase()}">
@@ -60,16 +68,30 @@
   .node-item {
     width: 100%;
     border-bottom: 1px solid #eee;
-    padding: 10px;
+    margin: 5px 0;
   }
-  .header {
+  .node-header {
     display: flex;
-    gap: 10px;
     align-items: center;
+    gap: 10px;
+    padding: 5px;
+    background: #f0f0f0;
+    border: 1px solid #ccc;
+    cursor: pointer;
   }
-  .body {
+  .node-header button {
+    padding: 5px 10px;
+    background: #e0e0e0;
+    border: 1px solid #ccc;
+  }
+  .node-body {
     padding: 10px;
     background: #fafafa;
+  }
+  .controls {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
   }
   .item {
     margin-bottom: 10px;

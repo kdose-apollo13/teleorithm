@@ -1,0 +1,179 @@
+Specification for GrafNav Application
+Purpose: GrafNav is a desktop application for visualizing and interacting with graph-based data. It provides a keyboard-driven, intuitive interface to explore nodes and connections, filter content, execute commands, and monitor events in real-time, all within a streamlined, minimalistic layout.
+Phenotype: The UI features a vertically stacked, full-width layout with collapsible sections for graph visualization (GraphViz) and node lists (NodeList), each with dedicated header bars for toggling and controls. Nodes within NodeList have similar collapsible headers. A CLI and Status Bar are pinned at the bottom. The interface uses keyboard navigation (j/k/i/Esc/;/spacebar), with gray borders (#ccc) by default, dark blue (#00008b) when focused, and full horizontal expansion.
+1. Overall Layout
+Purpose: Organize the interface for clear navigation and interaction with graph data.
+Appearance:
+Full-width (100%) vertical stack, filling the window.
+
+Sections:
+GraphViz Header: Full-width bar with name, info, and controls.
+
+NodeList Header: Full-width bar with name, info, and controls, below GraphViz header.
+
+Node Headers: Full-width bars within NodeList (when expanded), one per node.
+
+CLI: Full-width input bar, pinned at the bottom.
+
+Status Bar: Full-width event log, pinned below CLI.
+Borders: Gray (#ccc), dark blue (#00008b) when focused.
+
+Backgrounds: Light gray (#f0f0f0) for headers, white/light gray for content.
+Behavior:
+Headers toggle section/node visibility via click or spacebar.
+
+Collapsed sections/nodes show only their headers, stacked at the top.
+
+CLI and Status Bar are always visible.
+
+Content between headers and CLI scrolls if needed.
+2. Components
+2.1 GraphViz Header
+Purpose: Toggle GraphViz visibility and display info/controls.
+Appearance:
+Full-width bar, topmost.
+
+Shows "GraphViz", status (e.g., "Show"/"Hide"), and placeholder for controls.
+
+Background: Light gray, border: Gray (dark blue when focused).
+Behavior:
+Click or spacebar toggles GraphViz content visibility.
+
+Logs toggle events (e.g., "GraphViz expanded").
+2.2 GraphViz Content
+Purpose: Display graph visualization.
+Appearance:
+Shown below GraphViz header when expanded.
+
+Mock area with node selection options.
+
+Border: Gray (dark blue when focused).
+Behavior:
+Displays selected node info.
+
+Node selection logs events (e.g., "Node node1 selected").
+2.3 NodeList Header
+Purpose: Toggle NodeList visibility and display info/controls.
+Appearance:
+Full-width bar, below GraphViz header.
+
+Shows "NodeList", status, and placeholder for controls.
+
+Background: Light gray, border: Gray (dark blue when focused).
+Behavior:
+Click or spacebar toggles NodeList content visibility.
+
+Logs toggle events.
+2.4 NodeList Content
+Purpose: List nodes with filtering and selection.
+Appearance:
+Shown below NodeList header when expanded.
+
+Contains node headers and their content (when expanded).
+
+Border: Gray (dark blue when focused).
+
+Selected node highlighted (light blue).
+Behavior:
+Displays nodes with collapsible headers.
+
+Supports j/k navigation for nodes when focused.
+
+Node selection/filtering logs events.
+2.5 Node Header
+Purpose: Toggle node content visibility and display info/controls.
+Appearance:
+Full-width bar per node, within NodeList (when expanded).
+
+Shows node ID, metadata, and status (e.g., "Collapse"/"Expand").
+
+Background: Light gray, border: Gray.
+Behavior:
+Click or spacebar toggles node content visibility.
+
+Logs toggle events (e.g., "Node node1 collapsed").
+2.6 Node Content
+Purpose: Display node items with filtering options.
+Appearance:
+Shown below node header when expanded.
+
+Includes selection button, type/level filters, and filtered items.
+
+Background: White/light gray.
+Behavior:
+Filters items by type/level.
+
+Selection/filter changes log events.
+2.7 CLI Bar
+Purpose: Execute commands.
+Appearance:
+Full-width, pinned above Status Bar.
+
+Text input with "CLI" label and placeholder.
+
+Background: Light gray, border: Gray (dark blue when focused).
+Behavior:
+Enter submits commands, logs them (e.g., "CLI command: [input]").
+
+Focused via i or ; without typing the key.
+
+Esc clears focus, returns to last section.
+2.8 Status Bar
+Purpose: Display real-time event logs.
+Appearance:
+Full-width, pinned at the bottom.
+
+Shows "Status" label and scrollable event list.
+
+Background: Light gray, border-top: Gray, small font.
+Behavior:
+Auto-scrolls to the latest event.
+
+Logs toggles, selections, filters, commands, and key presses.
+3. Interactions
+3.1 Keyboard Navigation
+j: Move down.
+In NodeList (expanded), selects next node (max: last node).
+
+Otherwise, focuses next section (max: CLI).
+
+Updates focus and logs key press.
+k: Move up.
+In NodeList, selects previous node (min: first node).
+
+Otherwise, focuses previous section (min: GraphViz).
+
+Updates focus and logs key press.
+i: Enter section.
+Focuses input/control in focused section (e.g., CLI input).
+
+Prevents typing i.
+Esc: Clear focus.
+Returns to last focused section, clears node selection.
+
+Blurs active element.
+;: Focus CLI.
+Focuses CLI input, prevents typing ;.
+Spacebar: Toggle.
+Toggles focused section/node visibility.
+
+Logs toggle event.
+3.2 Mouse Interactions
+Click header bars to toggle section/node visibility.
+
+Click GraphViz/NodeList controls to select nodes or apply filters.
+4. Event Logging
+Logs: Section/node toggles, node selections, filter changes, CLI commands, key presses.
+
+Displayed in Status Bar, auto-scrolling to the latest.
+
+Format: "[Action] at [time]".
+5. Appearance Summary
+Colors: Light gray backgrounds, gray borders, dark blue for focus, light blue for selections.
+
+Layout: Full-width, vertically stacked headers at the top, CLI/Status Bar at the bottom.
+
+Visual Cues: Borders and highlights indicate focus/selection.
+6. Purpose Summary
+GrafNav enables efficient graph data exploration with a keyboard-driven, collapsible interface. Its clear, full-width headers, pinned CLI/Status Bar, and real-time logging provide a focused, interactive experience for navigating and manipulating graph structures.
+

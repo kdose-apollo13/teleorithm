@@ -5,29 +5,36 @@
   // --- Configuration ---
   const BORDER_DEFAULT = 'border-gray-300';
   const BORDER_FOCUSED = 'border-darkblue-600 ring-1 ring-darkblue-600';
-  const BG_SELECTED_NODE = 'bg-blue-200';
+  const BG_SELECTED_ITEM = 'bg-blue-200'; // Used for selected node in NodeList and GraphViz tree
 
   // --- Stores for reactive state ---
   const eventLogs = writable([]);
-  const focusedId = writable('graphviz-header'); // Visual focus
-  const navigationContext = writable('sections'); // 'sections' or 'nodes'
+  const focusedId = writable('graphviz-header'); // Visual focus for sections/node-headers
+  const navigationContext = writable('sections'); // 'sections', 'nodes', or 'graphviz-tree'
   const lastFocusedIdBeforeCli = writable('graphviz-header');
-  const previouslyFocusedNodeHeaderId = writable(null); // For returning from node item controls
+  const previouslyFocusedNodeHeaderId = writable(null); 
 
   const graphVizVisible = writable(true);
+  const graphVizSelectedNodeIdInTree = writable(null); // Tracks selection in GraphViz tree
+
   const nodeListVisible = writable(true);
 
   const initialNodes = [
     { id: 'node1', name: 'Alpha Node', metadata: 'Type: A, Status: Active', contentVisible: true, items: ['Detail A1 (Type X, Lvl 1)', 'Detail A2 (Type Y, Lvl 2)'], itemFilters: { type: '', level: '' }, selectedItem: null },
     { id: 'node2', name: 'Beta Node', metadata: 'Type: B, Status: Inactive', contentVisible: false, items: ['Detail B1 (Type X, Lvl 2)', 'Detail B2 (Type Z, Lvl 1)', 'Detail B3 (Type Y, Lvl 1)'], itemFilters: { type: '', level: '' }, selectedItem: null },
     { id: 'node3', name: 'Gamma Node', metadata: 'Type: A, Status: Pending', contentVisible: true, items: ['Detail G1 (Type Z, Lvl 3)'], itemFilters: { type: '', level: '' }, selectedItem: null },
+    { id: 'node4', name: 'Delta Node', metadata: 'Type: C, Status: Archived', contentVisible: false, items: ['Detail D1'], itemFilters: { type: '', level: '' }, selectedItem: null },
+    { id: 'node5', name: 'Epsilon Node', metadata: 'Type: B, Status: Active', contentVisible: false, items: ['Detail E1', 'Detail E2'], itemFilters: { type: '', level: '' }, selectedItem: null },
   ];
   const nodes = writable(initialNodes);
   const cliInputValue = writable('');
 
   // --- Refs for DOM elements ---
   let graphvizHeaderRef;
-  let graphvizContentDummySelectorRef;
+  // graphvizContentDummySelectorRef removed as 'i' now enters tree
+  let graphvizContentAreaRef; // For overall content area focus indication
+  let graphvizTreeItemRefs = {}; // For scrolling items in GraphViz tree
+
   let nodeListHeaderRef;
   let nodeListFilterInputRef;
   let nodeHeaderRefs = {};
@@ -40,7 +47,7 @@
     const timestamp = new Date().toLocaleTimeString();
     eventLogs.update(logs => {
       const newLogs = [...logs, `[${timestamp}] ${message}`];
-      if (newLogs.length > 100) newLogs.shift(); // Keep logs manageable
+      if (newLogs.length > 100) newLogs.shift();
       return newLogs;
     });
     tick().then(() => {
@@ -59,6 +66,11 @@
   function toggleGraphViz() {
     graphVizVisible.update(v => !v);
     logEvent(`GraphViz ${$graphVizVisible ? 'expanded' : 'collapsed'}`);
+    if (!$graphVizVisible && $navigationContext === 'graphviz-tree') {
+      navigationContext.set('sections');
+      setVisualFocus('graphviz-header');
+      graphVizSelectedNodeIdInTree.set(null);
+    }
   }
 
   function toggleNodeList() {
@@ -78,10 +90,8 @@
     );
     const node = $nodes.find(n => n.id === nodeId);
     logEvent(`Node ${node.name} ${node.contentVisible ? 'expanded' : 'collapsed'}`);
-    // If node content is hidden and its controls were focused, blur and return focus to header
     if (!node.contentVisible && document.activeElement === nodeContentDummySelectorRefs[nodeId]) {
         nodeContentDummySelectorRefs[nodeId]?.blur();
-        // Visual focus should already be on node header or handled by Esc
     }
   }
 
@@ -108,37 +118,27 @@
           if (event.key === 'Enter') {
             event.preventDefault();
             handleCliSubmit();
-            // cliInputRef.blur(); // Optionally blur after submit
-            // navigationContext.set('sections');
-            // setVisualFocus($lastFocusedIdBeforeCli);
             return;
           }
-          // Allow typing (j, k, etc.) in CLI
           logEvent(`CLI Input Key: ${event.key}`);
           return;
         }
-        // Handle Esc for other focusable controls
         if (event.key === 'Escape') {
           event.preventDefault();
           activeElement.blur();
           logEvent(`Blurred ${activeElement.id || 'control'} (Esc)`);
-          if (activeElement === graphvizContentDummySelectorRef) {
-            navigationContext.set('sections'); setVisualFocus('graphviz-header');
-          } else if (activeElement === nodeListFilterInputRef) {
+          if (activeElement === nodeListFilterInputRef) {
             navigationContext.set('sections'); setVisualFocus('nodelist-header');
           } else if (Object.values(nodeContentDummySelectorRefs).includes(activeElement)) {
-            navigationContext.set('nodes'); // Stay in nodes context
-            setVisualFocus($previouslyFocusedNodeHeaderId || 'nodelist-header'); // Return to the node header
+            navigationContext.set('nodes'); 
+            setVisualFocus($previouslyFocusedNodeHeaderId || 'nodelist-header');
           }
           return;
         }
-        // Allow Space/Enter on focused buttons to trigger click (default behavior often works)
         if ((event.key === ' ' || event.key === 'Enter') && activeElement.tagName === 'BUTTON') {
             logEvent(`Button ${activeElement.textContent} activated by ${event.key}`);
-            // Allow default action to proceed (which should be a click)
             return;
         }
-         // If it's nodeListFilterInputRef, let most keys type
         if (activeElement === nodeListFilterInputRef && event.key.length === 1) {
             logEvent(`NodeList Filter Input Key: ${event.key}`);
             return;
@@ -146,12 +146,10 @@
       }
 
       // Priority 2: Global navigation and actions
-      // Prevent default for keys we will handle for navigation/toggling
       if (['j', 'k', 'i', ';', ' ', 'Escape'].includes(event.key)) {
         event.preventDefault();
-        logEvent(`Global Key: ${event.key}, Context: ${currentNavContext}, Focused: ${currentFocusedId}`);
+        logEvent(`Global Key: ${event.key}, Context: ${currentNavContext}, Focused: ${currentFocusedId}, SelGV: ${$graphVizSelectedNodeIdInTree}`);
       } else {
-        // Don't process other keys globally
         return;
       }
 
@@ -162,12 +160,24 @@
             setVisualFocus(sectionFocusOrder[currentIndex + 1]);
           }
         } else if (currentNavContext === 'nodes') {
-          const activeNodes = $nodeListVisible ? $nodes.filter(n => $nodeListVisible) : []; // Ensure nodes are from visible list
-          if (activeNodes.length === 0) return;
-          const currentNodeHeaderId = currentFocusedId;
-          const nodeIndex = activeNodes.findIndex(n => `node-${n.id}-header` === currentNodeHeaderId);
-          if (nodeIndex < activeNodes.length - 1) {
-            setVisualFocus(`node-${activeNodes[nodeIndex + 1].id}-header`);
+          const visibleNodes = $nodes.filter(n => $nodeListVisible);
+          if (visibleNodes.length === 0) return;
+          const nodeIndex = visibleNodes.findIndex(n => `node-${n.id}-header` === currentFocusedId);
+          if (nodeIndex < visibleNodes.length - 1) {
+            const nextNodeId = visibleNodes[nodeIndex + 1].id;
+            setVisualFocus(`node-${nextNodeId}-header`);
+            tick().then(() => nodeHeaderRefs[nextNodeId]?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+          }
+        } else if (currentNavContext === 'graphviz-tree') {
+          if ($nodes.length === 0) return;
+          const currentIndex = $nodes.findIndex(n => n.id === $graphVizSelectedNodeIdInTree);
+          if (currentIndex < $nodes.length - 1) {
+            const nextNodeId = $nodes[currentIndex + 1].id;
+            graphVizSelectedNodeIdInTree.set(nextNodeId);
+            tick().then(() => graphvizTreeItemRefs[nextNodeId]?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }));
+          } else if ($graphVizSelectedNodeIdInTree === null && $nodes.length > 0) { // If nothing selected, select first
+             graphVizSelectedNodeIdInTree.set($nodes[0].id);
+             tick().then(() => graphvizTreeItemRefs[$nodes[0].id]?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }));
           }
         }
       } else if (event.key === 'k') {
@@ -177,34 +187,54 @@
             setVisualFocus(sectionFocusOrder[currentIndex - 1]);
           }
         } else if (currentNavContext === 'nodes') {
-          const activeNodes = $nodeListVisible ? $nodes.filter(n => $nodeListVisible) : [];
-          if (activeNodes.length === 0) return;
-          const currentNodeHeaderId = currentFocusedId;
-          const nodeIndex = activeNodes.findIndex(n => `node-${n.id}-header` === currentNodeHeaderId);
+          const visibleNodes = $nodes.filter(n => $nodeListVisible);
+          if (visibleNodes.length === 0) return;
+          const nodeIndex = visibleNodes.findIndex(n => `node-${n.id}-header` === currentFocusedId);
           if (nodeIndex > 0) {
-            setVisualFocus(`node-${activeNodes[nodeIndex - 1].id}-header`);
+            const prevNodeId = visibleNodes[nodeIndex - 1].id;
+            setVisualFocus(`node-${prevNodeId}-header`);
+            tick().then(() => nodeHeaderRefs[prevNodeId]?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+          }
+        } else if (currentNavContext === 'graphviz-tree') {
+          if ($nodes.length === 0) return;
+          const currentIndex = $nodes.findIndex(n => n.id === $graphVizSelectedNodeIdInTree);
+          if (currentIndex > 0) {
+            const prevNodeId = $nodes[currentIndex - 1].id;
+            graphVizSelectedNodeIdInTree.set(prevNodeId);
+            tick().then(() => graphvizTreeItemRefs[prevNodeId]?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }));
           }
         }
       } else if (event.key === 'i') {
         if (currentNavContext === 'sections') {
           if (currentFocusedId === 'graphviz-header') {
-            graphvizContentDummySelectorRef?.focus();
-            logEvent('Entered GraphViz controls');
+            if ($graphVizVisible) {
+              navigationContext.set('graphviz-tree');
+              setVisualFocus('graphviz-content'); // Visually focus the content area
+              if ($nodes.length > 0 && $graphVizSelectedNodeIdInTree === null) {
+                graphVizSelectedNodeIdInTree.set($nodes[0].id); // Select first item
+                tick().then(() => graphvizTreeItemRefs[$nodes[0].id]?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }));
+              }
+              logEvent('Entered GraphViz tree navigation');
+            } else {
+              logEvent('GraphViz not visible, cannot enter tree');
+            }
           } else if (currentFocusedId === 'nodelist-header') {
             if ($nodeListVisible && $nodes.length > 0) {
               navigationContext.set('nodes');
-              setVisualFocus(`node-${$nodes[0].id}-header`);
+              const firstNodeId = $nodes[0].id;
+              setVisualFocus(`node-${firstNodeId}-header`);
+              tick().then(() => nodeHeaderRefs[firstNodeId]?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
               logEvent('Entered NodeList (node navigation)');
             } else {
               nodeListFilterInputRef?.focus();
               logEvent('Entered NodeList filter control');
             }
           } else if (currentFocusedId === 'cli-input') {
-            lastFocusedIdBeforeCli.set(currentFocusedId); // Or the one before it if needed
+            lastFocusedIdBeforeCli.set(currentFocusedId); 
             cliInputRef?.focus();
             logEvent('Entered CLI input field');
           }
-        } else if (currentNavContext === 'nodes') { // A node header is visually focused
+        } else if (currentNavContext === 'nodes') { 
           const nodeId = currentFocusedId.replace('node-', '').replace('-header', '');
           const node = $nodes.find(n => n.id === nodeId);
           if (node && node.contentVisible) {
@@ -215,35 +245,40 @@
             logEvent(`Node ${nodeId} content not visible or node not found, cannot enter controls.`);
           }
         }
+        // No 'i' action when in 'graphviz-tree' context itself, j/k used for nav
       } else if (event.key === 'Escape') {
-        // This Esc is for when no specific input was focused (handled above)
         if (currentNavContext === 'nodes') {
           navigationContext.set('sections');
           setVisualFocus('nodelist-header');
           logEvent('Exited node navigation to sections');
+        } else if (currentNavContext === 'graphviz-tree') {
+          navigationContext.set('sections');
+          setVisualFocus('graphviz-header');
+          // graphVizSelectedNodeIdInTree.set(null); // Optionally clear selection on exit
+          logEvent('Exited GraphViz tree navigation to sections');
         } else {
-            logEvent('Global Escape (no specific context change)');
-            // Potentially blur any lingering focus if not body, though activeElement check should catch most.
+            logEvent('Global Escape (sections context, no specific input focused)');
             if(document.activeElement !== document.body) document.activeElement?.blur();
         }
       } else if (event.key === ';') {
         if (currentNavContext === 'sections' && currentFocusedId !== 'cli-input') {
             lastFocusedIdBeforeCli.set(currentFocusedId);
         } else if (currentNavContext === 'nodes') {
-            lastFocusedIdBeforeCli.set('nodelist-header'); // Sensible return point
+            lastFocusedIdBeforeCli.set('nodelist-header'); 
+        } else if (currentNavContext === 'graphviz-tree') {
+            lastFocusedIdBeforeCli.set('graphviz-header');
         }
-        // If already cli-input, lastFocusedIdBeforeCli is already set or remains.
         setVisualFocus('cli-input');
         cliInputRef?.focus();
         logEvent('Focused CLI via ;');
       } else if (event.key === ' ') {
-        // Spacebar for toggles (if not handled by a focused button/input)
         if (currentFocusedId === 'graphviz-header') toggleGraphViz();
         else if (currentFocusedId === 'nodelist-header') toggleNodeList();
         else if (currentFocusedId.startsWith('node-') && currentFocusedId.endsWith('-header') && currentNavContext === 'nodes') {
           const nodeId = currentFocusedId.replace('node-', '').replace('-header', '');
           toggleNodeContent(nodeId);
         }
+        // No spacebar action within graphviz-tree context for now, could be 'select' or 'toggle detail' later
       }
     };
 
@@ -251,7 +286,6 @@
     return () => window.removeEventListener('keydown', handleKeyDown);
   });
 
-  // --- CLI Command Handling ---
   function handleCliSubmit() {
     if ($cliInputValue.trim()) {
       logEvent(`CLI command: ${$cliInputValue}`);
@@ -259,7 +293,6 @@
     }
   }
 
-  // --- Node Item Filtering & Selection (Dummy) ---
   function handleNodeItemFilterChange(nodeId, filterType, value) {
     nodes.update(prevNodes =>
       prevNodes.map(n =>
@@ -278,7 +311,6 @@
     logEvent(`Node ${nodeId} item selected: ${item}`);
   }
 
-  // Reactive class computation
   const getBorderClass = (id) => ($focusedId === id ? BORDER_FOCUSED : BORDER_DEFAULT);
 
 </script>
@@ -290,10 +322,7 @@
       theme: {
         extend: {
           colors: {
-            'darkblue': {
-              DEFAULT: '#00008b',
-              '600': '#00008b',
-            },
+            'darkblue': { DEFAULT: '#00008b', '600': '#00008b' },
           }
         }
       }
@@ -306,8 +335,12 @@
     .status-log-content::-webkit-scrollbar-thumb:hover { background: #bbb; }
     :global(html, body) { height: 100%; margin: 0; font-family: sans-serif; }
     :global(#app) { height: 100%; }
-    /* Ensure focused elements are clearly visible, even if just via border */
-     *:focus { outline: none; } /* Remove default browser outline if we use borders */
+     *:focus { outline: none; } 
+    .graphviz-tree-item {
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+        cursor: default;
+    }
   </style>
 </svelte:head>
 
@@ -323,33 +356,31 @@
       >
         <div class="flex justify-between items-center">
           <span class="font-semibold">GraphViz</span>
-          <div class="flex items-center space-x-2">
-            <span class="text-xs">Status: {$graphVizVisible ? 'Show' : 'Hide'}</span>
-            <button 
-              class="text-xs px-2 py-1 border border-gray-400 rounded hover:bg-gray-200 focus:ring-1 focus:ring-darkblue-600"
-              on:click|stopPropagation={(e) => { logEvent('GraphViz control placeholder clicked.'); graphvizContentDummySelectorRef?.focus(); }}
-              bind:this={graphvizContentDummySelectorRef}
-              tabindex="-1"
-            >
-              Graph Controls
-            </button>
+          <span class="text-xs">Status: {$graphVizVisible ? 'Show' : 'Hide'}</span>
           </div>
-        </div>
       </div>
       {#if $graphVizVisible}
         <div
+          bind:this={graphvizContentAreaRef}
           id="graphviz-content"
-          class="p-4 border border-t-0 rounded-b {getBorderClass('graphviz-content')}"
-          class:border-darkblue-600={document.activeElement === graphvizContentDummySelectorRef}
+          class="p-2 border border-t-0 rounded-b {getBorderClass('graphviz-content')} min-h-[100px] max-h-64 overflow-y-auto"
         >
-          <p class="text-gray-700">Graph Visualization Area</p>
-          <p class="text-xs text-gray-500 mb-2">Mock content. Click a dummy node to "select" it.</p>
-          <div class="space-x-2">
-            <button class="px-2 py-1 text-xs bg-blue-100 hover:bg-blue-200 border border-blue-300 rounded focus:outline-none focus:ring-1 focus:ring-darkblue-600" on:click={() => logEvent('GraphViz: Dummy Node 1 selected')}>Select Node 1</button>
-            <button class="px-2 py-1 text-xs bg-blue-100 hover:bg-blue-200 border border-blue-300 rounded focus:outline-none focus:ring-1 focus:ring-darkblue-600" on:click={() => logEvent('GraphViz: Dummy Node 2 selected')}>Select Node 2</button>
-          </div>
-           {#if document.activeElement === graphvizContentDummySelectorRef}
-            <p class="text-xs mt-2 text-darkblue-600">Graph controls are DOM focused.</p>
+          {#if $navigationContext === 'graphviz-tree'}
+            <p class="text-xs text-gray-500 mb-1">Navigating Graph Tree (j/k, Esc to exit)</p>
+            {#each $nodes as node (node.id)}
+              <div
+                bind:this={graphvizTreeItemRefs[node.id]}
+                class="graphviz-tree-item hover:bg-gray-100 { $graphVizSelectedNodeIdInTree === node.id ? BG_SELECTED_ITEM : ''}"
+                on:click={() => { graphVizSelectedNodeIdInTree.set(node.id); logEvent(`GraphViz tree: ${node.name} clicked`);}}
+              >
+                {node.name} <span class="text-xs text-gray-500">({node.metadata})</span>
+              </div>
+            {:else}
+              <p class="text-xs text-gray-500">No nodes to display in tree.</p>
+            {/each}
+          {:else}
+            <p class="text-sm text-gray-700">Graph Visualization Area</p>
+            <p class="text-xs text-gray-500">Press 'i' on header to enter tree navigation.</p>
           {/if}
         </div>
       {/if}
@@ -383,7 +414,7 @@
         <div
           id="nodelist-content"
           class="border border-t-0 rounded-b p-1 space-y-1 {getBorderClass('nodelist-content')}"
-           class:border-darkblue-600={$navigationContext === 'nodes' || document.activeElement === nodeListFilterInputRef}
+           class:border-darkblue-600={$navigationContext === 'nodes' || document.activeElement === nodeListFilterInputRef || ($navigationContext === 'nodes' && $focusedId.startsWith('node-'))}
         >
           {#if $nodes.length === 0}
             <p class="text-gray-500 p-2">No nodes to display.</p>
@@ -393,8 +424,12 @@
                 <div
                   bind:this={nodeHeaderRefs[node.id]}
                   id={`node-${node.id}-header`}
-                  class="p-2 border rounded cursor-pointer {getBorderClass(`node-${node.id}-header`)} {$focusedId === `node-${node.id}-header` ? BG_SELECTED_NODE : 'bg-gray-100 hover:bg-gray-200'}"
-                  on:click={() => { navigationContext.set('nodes'); setVisualFocus(`node-${node.id}-header`); toggleNodeContent(node.id); }}
+                  class="p-2 border rounded cursor-pointer {getBorderClass(`node-${node.id}-header`)} {$focusedId === `node-${node.id}-header` ? BG_SELECTED_ITEM : 'bg-gray-100 hover:bg-gray-200'}"
+                  on:click={() => { 
+                    setVisualFocus(`node-${node.id}-header`); 
+                    navigationContext.set('nodes'); 
+                    toggleNodeContent(node.id); 
+                  }}
                   tabindex="-1"
                 >
                   <div class="flex justify-between items-center">
@@ -460,10 +495,10 @@
       placeholder="Enter command..."
       bind:value={$cliInputValue}
       on:focus={() => { 
-        if ($focusedId !== 'cli-input') { // If DOM focus happens via mouse click, ensure visual focus matches
-            lastFocusedIdBeforeCli.set($focusedId); // Store where we came from
+        if ($focusedId !== 'cli-input') { 
+            lastFocusedIdBeforeCli.set($focusedId); 
             setVisualFocus('cli-input'); 
-            navigationContext.set('sections'); // Assume it's a section level focus if clicked directly
+            navigationContext.set('sections'); 
         }
         logEvent('CLI input DOM focused');
       }}

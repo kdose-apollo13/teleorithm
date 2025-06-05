@@ -1,0 +1,316 @@
+UI Specification: Electron + Svelte Application Prototype
+
+Version: 0.8 (Based on current development stage)
+Date: June 5, 2025
+
+1. Overview
+
+This document outlines the user interface (UI) and interaction specifications for an Electron and Svelte-based desktop application. The application is designed for managing and interacting with various types of "views," such as graph visualizations and node content, organized within a multi-pane layout.
+
+2. Overall Layout
+
+The application UI is structured into three primary horizontal sections, stacked vertically:
+
+    2.1. View Area:
+        Occupies the majority of the screen's vertical space, positioned above the CLI Bar.
+        This is where user-generated content (views) will be displayed, organized into one or more vertical panes.
+    2.2. CLI Bar:
+        A thin bar spanning the full width of the screen, positioned directly above the Status Bar.
+        Provides core application controls and command input.
+    2.3. Status Bar:
+        The bottom-most bar, spanning the full width of the screen.
+        Displays application status messages and contextual information.
+
+3. CLI Bar Components & Interactions
+
+The CLI Bar provides controls for loading content, managing panes, and performing bulk actions on views.
+
+    3.1. "L" (Load) Button:
+        Functionality: When clicked, displays a pop-up menu.
+        Pop-up Options:
+            "New Graph Viz": Instantiates a new "Graph Visualization" view.
+            "New Node Content": Instantiates a new "Node Content" view.
+        Targeting: New views are loaded into the currently active pane within the View Area.
+        Accessibility: Button has aria-haspopup="true" and aria-expanded state. Menu has role="menu" and items have role="menuitem".
+    3.2. Command Text Box:
+        Functionality: A text input field for users to type and execute command-line instructions.
+        Interaction: Pressing "Enter" triggers command execution (current implementation logs the command).
+        Accessibility: Has an aria-label.
+    3.3. Bulk View Action Buttons:
+        Positioned to the left of the pane management buttons.
+        3.3.1. "X Sel" (Close Selected) Button:
+            Functionality: When clicked, removes all currently selected view items from their respective panes.
+            Accessibility: Standard button with an appropriate aria-label.
+        3.3.2. "^ Sel" (Expand All Selected) Button:
+            Functionality: When clicked, expands all currently selected view items (sets their isCollapsed state to false).
+            Accessibility: Standard button with an appropriate aria-label.
+        3.3.3. "v Sel" (Collapse All Selected) Button:
+            Functionality: When clicked, collapses all currently selected view items (sets their isCollapsed state to true).
+            Accessibility: Standard button with an appropriate aria-label.
+    3.4. Pane Management Buttons:
+        3.4.1. "+" (Add Pane) Button:
+            Functionality: When clicked, a new vertical pane is added to the right of existing panes in the View Area.
+            Layout Adjustment: All panes in the View Area dynamically adjust their widths to equally share the available horizontal space.
+            Selection: The newly added pane automatically becomes the active pane.
+            Accessibility: Standard button with an appropriate aria-label.
+        3.4.2. "-" (Remove Pane) Button:
+            Functionality: When clicked, the currently active pane in the View Area is removed.
+            Constraint: This button is disabled if only one pane remains.
+            Selection Adjustment:
+                If the removed pane was the last one in the sequence (rightmost), the pane immediately to its left becomes the new active pane.
+                Otherwise, the pane that shifts into the removed pane's position (same index) becomes the new active pane.
+            Accessibility: Standard button with an appropriate aria-label.
+
+4. Status Bar
+
+    Content: Displays application status messages, current state information, and feedback.
+    Examples: "Status: Ready," "Active Pane: [current] of [total]," "Selected Views: [count]."
+    Accessibility: Has role="status" and aria-live="polite" for screen reader announcements.
+
+5. View Area & Panes
+
+    5.1. Structure: The View Area is composed of one or more vertical "panes." Each pane consists of a header and a content area for views.
+    5.2. Pane Selection & Activation:
+        Interaction: Clicking anywhere within a pane's main container area (including its header) designates it as the active pane.
+        Visual Indicator: The active pane has a distinct visual style (e.g., border, background color).
+        Accessibility:
+            The overall View Area acts as a role="tablist".
+            Each pane's header (.pane-header) acts as a role="tab" and is keyboard focusable (tabindex="0"). It can be activated using "Enter" or "Space". It includes aria-selected and aria-controls pointing to the pane's content area.
+            The pane's content area (.pane-content) has role="tabpanel" and is aria-labelledby its header.
+    5.3. Layout:
+        Panes dynamically adjust their widths to equally share the available horizontal space within the View Area.
+        Each pane has a header section and a main content section (.view-list-container) below it. The view-list-container is responsible for vertical scrolling of views if they exceed available space.
+    5.4. View Instantiation: Views generated via the "L" (Load) button appear within the currently active pane.
+
+6. View Item Properties & Interactions
+
+Each individual "view" (e.g., Graph Viz, Node Content) within a pane has the following structure and behaviors:
+
+    6.1. Data Properties (per view object):
+        id: Unique identifier.
+        type: String indicating view type (e.g., "graph", "node").
+        title: Display string for the view.
+        isCollapsed: Boolean, false by default.
+        isSelected: Boolean, false by default.
+    6.2. Overall Structure:
+        Each view is a distinct draggable unit.
+        Accessibility: Each view item container has role="option" within its parent listbox (the .view-list-container) and aria-labelledby its title. It's keyboard focusable.
+    6.3. Header Bar: A top section within the view item, containing controls from left to right:
+        6.3.1. Selection Toggle:
+            Visual: A checkbox-like control.
+            Functionality: Toggles the isSelected state of the view item. Visually changes to indicate selection (e.g., background color, checkmark).
+            Multi-select: Multiple views can be selected simultaneously across different panes.
+            Accessibility: Acts as role="checkbox", with aria-checked state, aria-label, and keyboard operable (Enter/Space).
+        6.3.2. Pin Toggle ("📌" Button):
+            Functionality: Toggles the "user-pinned anchor" state for this view within its pane.
+                If clicked on an unpinned view, this view becomes the pinnedByUserAnchorViewId for its pane. This view and all views above it in the same pane become "sticky."
+                If clicked on the view that is currently the pinnedByUserAnchorViewId, the pane's pinnedByUserAnchorViewId is set to null (unpinning the stack).
+            Visual Indication: The pin button changes appearance (e.g., color, rotation) when its view is the active pinning anchor.
+            Accessibility: Standard button with an appropriate aria-label.
+        6.3.3. Title Button:
+            Visual: Displays the view.title.
+            Functionality: Clicking this button toggles the isCollapsed state of the view's content section.
+            Accessibility: Implemented as a <button> with aria-expanded state.
+        6.3.4. View Controls (Right-aligned):
+            Collapse/Expand Arrow (△/▽):
+                Functionality: Also toggles the isCollapsed state of the view's content section.
+                Accessibility: Implemented as a <button> with aria-expanded and aria-controls (pointing to the view content ID).
+            "X" (Close Button):
+                Functionality: Removes this individual view item from its pane.
+                Accessibility: Implemented as a <button> with an appropriate aria-label.
+    6.4. Collapsible Content Section:
+        The area below the header bar that houses the actual view-specific content (e.g., Graph Visualization or Node Content details).
+        Visibility is controlled by the isCollapsed state.
+        Accessibility: Has role="region" and aria-labelledby its view title.
+    6.5. Stacked Sticky Pinning Behavior:
+        When a view is set as the pinnedByUserAnchorViewId for a pane:
+            This anchor view and all view items visually above it in the same pane become position: sticky.
+            The top CSS property for each of these sticky views is dynamically calculated and applied via JavaScript. The top value for a sticky view N is the sum of the actual rendered heights (respecting isCollapsed state) of all sticky views from 0 to N-1 above it in the stack.
+            View items below the pinned stack scroll normally underneath the sticky stack.
+            This behavior is managed by an applyStickyStyles() JavaScript function, triggered after relevant DOM updates (e.g., pinning, collapse/expand, view addition/removal). DOM element references (bind:this) are used for height measurements.
+    6.6. Drag and Drop (Basic Implementation):
+        Views are draggable (draggable="true").
+        Views can be dragged from one pane and dropped into another.
+        Upon dropping, the view is removed from the source pane and added to the target pane. Its isSelected and isCollapsed states are reset to default (false).
+        Pinned status of a dragged view is cleared from the source pane.
+
+7. Accessibility (A11y) Considerations
+
+    Keyboard Navigation: All interactive elements (buttons, pane headers, view selection toggles, pin toggles, view title buttons, view control buttons) must be focusable and operable via keyboard (typically "Enter" and/or "Space").
+    ARIA Roles & Attributes: Appropriate ARIA roles (e.g., tablist, tab, tabpanel, listbox, option, checkbox, button, menu, menuitem, status, region) and properties (e.g., aria-label, aria-labelledby, aria-controls, aria-selected, aria-expanded, aria-checked, aria-haspopup, aria-live) are used to ensure semantic clarity for assistive technologies.
+    Focus Visibility: Clear visual focus indicators (:focus-visible) are provided for all focusable elements.
+
+8. Technical Stack (Implied)
+
+    Framework: Electron (for desktop application shell)
+    UI Library: Svelte (for building the reactive user interface)
+
+This specification should capture the essence of your application as we've developed it. It can be expanded with more detail for specific view types, command functionalities, or error handling as the project grows.
+Okay, this is a great point to consolidate! Generating a specification document from our iterative process will provide a clear snapshot of all the features and behaviors we've defined for your Electron + Svelte prototype.
+
+Here is a "seed specification" based on our current requirements:
+
+Project Title: Interactive Multi-Pane Visualization Application (Prototype)
+
+Version: 0.3 (derived from current interactive feature set)
+
+Date: June 5, 2025
+
+1. Overview
+
+This document specifies the user interface (UI) and interaction design for an Electron application built with Svelte. The application provides a multi-pane environment for displaying and managing different types of "views" (e.g., Graph Visualizations, Node Content) with a command-line interface for additional control.
+
+2. Overall Application Layout
+
+The application UI is structured into three primary horizontal sections, stacked vertically:
+
+    2.1. View Area:
+        Occupies the majority of the screen's vertical space, positioned above the CLI Bar.
+        This area is dedicated to displaying user-instantiated content within panes.
+    2.2. CLI Bar:
+        A dedicated bar spanning the full width of the screen, positioned directly above the Status Bar.
+        Provides core application controls and command input.
+    2.3. Status Bar:
+        The bottom-most bar, spanning the full width of the screen.
+        Displays application status messages and contextual information.
+
+3. CLI Bar: Components & Interactions
+
+The CLI Bar provides the following functionalities:
+
+    3.1. "L" (Load) Button:
+        Functionality: When clicked, displays a pop-up menu.
+        Pop-up Options:
+            "New Graph Viz": Instantiates a new "Graph Visualization" view.
+            "New Node Content": Instantiates a new "Node Content" view.
+        Targeting: New views are loaded into the currently active pane within the View Area.
+        Accessibility: The button indicates it has a pop-up (aria-haspopup, aria-expanded). Menu items have appropriate roles (menu, menuitem).
+    3.2. Command Text Box:
+        Functionality: A text input field for users to type and execute command-line instructions.
+        Execution: Pressing "Enter" triggers command execution (current functionality is placeholder logging).
+        Accessibility: Has an accessible name (aria-label).
+    3.3. Bulk View Item Action Buttons:
+        3.3.1. "X Sel" (Close Selected Views) Button:
+            Functionality: When clicked, removes all currently selected view items from their respective panes.
+            Accessibility: Has an accessible name and title.
+        3.3.2. "^ Sel" (Expand All Selected Views) Button:
+            Functionality: When clicked, expands all currently selected view items (sets their isCollapsed state to false).
+            Accessibility: Has an accessible name and title.
+        3.3.3. "v Sel" (Collapse All Selected Views) Button:
+            Functionality: When clicked, collapses all currently selected view items (sets their isCollapsed state to true).
+            Accessibility: Has an accessible name and title.
+    3.4. Pane Management Buttons:
+        3.4.1. "+" (Add Pane) Button:
+            Functionality: When clicked, a new vertical pane is added to the right of existing panes in the View Area.
+            Layout Adjustment: All panes in the View Area dynamically adjust their widths to equally share the available horizontal space.
+            Selection: The newly added pane automatically becomes the active pane.
+            Accessibility: Has an accessible name and title.
+        3.4.2. "-" (Remove Pane) Button:
+            Functionality: When clicked, the currently active pane in the View Area is removed.
+            Constraint: Disabled if only one pane remains.
+            Selection Adjustment:
+                If the removed pane was the last one in the sequence (rightmost), the pane immediately to its left becomes the new active pane.
+                Otherwise, the pane that shifts into the removed pane's position (same index) becomes the active pane.
+            Accessibility: Has an accessible name and title; disabled state is programmatically conveyed.
+
+4. Status Bar
+
+    Content: Displays dynamic application status information.
+    Examples:
+        General status (e.g., "Status: Ready").
+        Active pane information (e.g., "Active Pane: 1 of 3").
+        Number of selected views (e.g., "Selected Views: 5").
+    Accessibility: Uses role="status" and aria-live="polite" to announce changes to assistive technologies.
+
+5. View Area & Panes
+
+    5.1. Structure:
+        The View Area is composed of one or more vertical "panes".
+        Each pane is a container for view items and has a designated header area and a content area for views.
+    5.2. Pane Selection & Activation:
+        Interaction: Clicking anywhere within a pane's main container area designates it as the active pane.
+        Visual Indication: The active pane has a distinct visual style (e.g., border, background color).
+        Accessibility:
+            The collection of panes is represented as a tablist.
+            Each pane's header area acts as a tab, being keyboard focusable and activatable (Enter/Space).
+            The main content area of the pane acts as a tabpanel.
+            Appropriate ARIA attributes (aria-selected, aria-controls, aria-labelledby) are used.
+    5.3. Layout:
+        Panes dynamically adjust their widths to equally share the available horizontal space within the View Area.
+    5.4. View Instantiation:
+        Views generated via the "L" (Load) button in the CLI Bar appear within the currently active pane.
+    5.5. Scrolling & View List Container:
+        Each pane contains a dedicated "view list container" that holds the actual view items.
+        If the number of views exceeds the available vertical space in this container, the container provides vertical scrolling. The pane header remains fixed above this scrolling area.
+
+6. View Items: Properties & Interactions
+
+Each individual "view" (e.g., Graph Visualization, Node Content) within a pane has the following characteristics:
+
+    6.1. Data Properties:
+        id: Unique identifier.
+        type: Type of view (e.g., 'graph', 'node').
+        title: Display title of the view.
+        isCollapsed: Boolean, tracks the collapsed/expanded state of the view's content.
+        isSelected: Boolean, tracks whether the view is currently selected by the user.
+    6.2. Visual Structure:
+        Header Bar: The top section of the view item.
+        Collapsible Content Section: The area below the header bar that houses the view's specific content.
+    6.3. Header Bar Components (visual order generally from left to right):
+        6.3.1. Selection Toggle:
+            Appearance: A checkbox-like visual control.
+            Functionality: Clicking this toggle (or activating via keyboard) flips the isSelected state of the view.
+            Indication: Visually changes (e.g., color, icon) to reflect the isSelected state.
+            Multi-select: Multiple view items can be selected simultaneously across different panes.
+            Accessibility: Implemented with role="checkbox", aria-checked, and keyboard support (Enter/Space).
+        6.3.2. Pin Toggle ("📌" icon):
+            Functionality: Allows the user to designate this view as the "anchor" for a stacked sticky effect within its pane.
+                Clicking an unpinned view's pin toggle sets it as the pane.pinnedByUserAnchorViewId.
+                Clicking an already anchored view's pin toggle unpins the stack for that pane (pane.pinnedByUserAnchorViewId = null).
+            Visual Indication: The toggle changes appearance (e.g., color, rotation) if its view is the current anchor for pinning.
+            Accessibility: Implemented as a button with an accessible name and title.
+        6.3.3. Title Button:
+            Content: Displays the view.title.
+            Functionality: Clicking this area (or activating via keyboard) toggles the isCollapsed state of the view's content section.
+            Accessibility: Implemented as a <button> with aria-expanded.
+        6.3.4. View Controls (typically grouped to the right):
+            Collapse/Expand Arrow (△/▽):
+                Functionality: Duplicates the action of the Title Button, toggling the isCollapsed state for this specific view.
+                Accessibility: Implemented as a <button> with aria-expanded and aria-controls.
+            "X" (Close) Button:
+                Functionality: When clicked, removes this individual view item from its pane.
+                Accessibility: Implemented as a <button> with an accessible name.
+    6.4. Collapsible Content Section:
+        The area that displays the actual content of the "Graph Visualization" or "Node Content".
+        Its visibility is controlled by the isCollapsed state of the view.
+        Accessibility: Can be associated with its controlling button via aria-controls and have role="region".
+    6.5. Stacked Sticky Pinning Behavior:
+        Activation: Triggered by using the Pin Toggle (6.3.2) on a view item. The pane stores a pinnedByUserAnchorViewId.
+        Effect:
+            The view designated by pinnedByUserAnchorViewId and all view items visually above it within the same pane become "sticky."
+            These sticky views stack one after another at the top of the pane's view list container.
+            The top CSS property for each sticky view is dynamically calculated (via JavaScript measurement of offsetHeight of preceding sticky views, accounting for their collapsed state) to ensure they stack without overlap.
+            View items below this sticky stack scroll normally underneath.
+        Deactivation: Toggling the pin on the current anchor view, or if the anchor view is removed/moved.
+        Recalculation: The top offsets for the sticky stack must be recalculated if:
+            The pinned anchor changes.
+            A view within the sticky stack is collapsed/expanded.
+            A view within the sticky stack is added or removed.
+    6.6. Drag-and-Drop:
+        Functionality: View items are draggable. Users can drag a view from one pane and drop it into another.
+        State on Drop: Dropped views typically appear unselected and expanded in the target pane. Pinning state is reset for the dropped view.
+        Accessibility: Basic draggable="true" attribute. Advanced keyboard-based drag-and-drop is a future consideration.
+
+7. Accessibility (A11Y) Considerations
+
+The application aims to adhere to accessibility best practices:
+
+    Keyboard Navigation: All interactive elements (buttons, inputs, panes, view components, toggles) must be focusable and operable via keyboard (typically Enter, Space, Tab, Arrow keys where appropriate).
+    ARIA Roles & Attributes: Semantic HTML is preferred. Where necessary, ARIA roles (e.g., tablist, tab, tabpanel, listbox, option, checkbox, button, menu, menuitem, status, region) and properties (aria-label, aria-labelledby, aria-controls, aria-selected, aria-expanded, aria-checked, aria-haspopup, aria-live) are used to define the structure, state, and purpose of UI components for assistive technologies.
+    Focus Management & Visibility: Clear visual focus indicators (:focus-visible) are provided for keyboard users.
+    Semantic HTML: Use of appropriate HTML elements for their intended purpose (e.g., <button> for interactive controls).
+
+8. Technical Stack (Implicit)
+
+    Framework: Electron for the desktop application shell.
+    UI Library: Svelte for building the user interface components.

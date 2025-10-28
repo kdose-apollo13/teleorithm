@@ -10,35 +10,36 @@ from vbwise.igrammar import IGrammar
 
 
 GNML_GRAMMAR = r'''
-gnml = ws (node_def ws)*
-node_def = node_start sp id_line sp content_lines sp node_end
-node_start = "### NODE" sp newline
-id_line = "---" sp "id" sp ":" sp complex_identifier sp newline
-node_end = "### ENDNODE" sp newline
-content_lines = content_line*
-content_line = meta_line / tags_line / next_line / prev_line / text_line / code_line
-meta_line = "---" sp "meta" sp ":" sp key_value_list* sp newline
-tags_line = "---" sp "tags" sp ":" sp identifier_list* sp newline
-next_line = "---" sp "next" sp ":" sp complex_identifier_list* sp newline
-prev_line = "---" sp "prev" sp ":" sp complex_identifier_list* sp newline
+    gnml                = ws (node_def ws)*
+    node_def            = node_start sp id_line sp content_lines sp node_end
+    node_start          = "### NODE" sp newline
+    id_line             = "---" sp "id" sp ":" sp complex_identifier sp newline
+    node_end            = "### ENDNODE" sp newline
+    content_lines       = content_line*
+    content_line        = meta_line / tags_line / next_line / prev_line / text_line / code_line
+    meta_line           = "---" sp "meta" sp ":" sp key_value_list* sp newline
+    tags_line           = "---" sp "tags" sp ":" sp identifier_list* sp newline
+    next_line           = "---" sp "next" sp ":" sp complex_identifier_list* sp newline
+    prev_line           = "---" sp "prev" sp ":" sp complex_identifier_list* sp newline
 
-text_line = text_level ">" sp text_content sp newline
-text_level = "T" ~r"[1-3]"
-text_content = ~r"[^\n]*"
+    text_line           = text_level ">" sp text_content sp newline
+    text_level          = "T" ~r"[1-3]"
+    text_content        = ~r"[^\n]*"
 
-code_line = code_level ">" sp code_content sp newline
-code_level = "C" ~r"[1-3]"
-code_content = ~r"[^\n]*"
+    code_line           = code_level ">" sp code_content sp newline
+    code_level          = "C" ~r"[1-3]"
+    code_content        = ~r"[^\n]*"
 
-identifier_list = identifier (sp "," sp identifier)*
-key_value_list = key_value (sp "," sp key_value)*
-key_value = identifier sp "=" sp complex_identifier
-complex_identifier_list = complex_identifier (sp "," sp complex_identifier)*
-complex_identifier = identifier ( "." identifier )*
-identifier = ~r"[a-zA-Z0-9_]+"
-ws = ~r"[\r\n\t ]*"
-sp = ~r"[ \t]*"
-newline = "\n"
+    identifier_list             = identifier (sp "," sp identifier)*
+    key_value_list              = key_value (sp "," sp key_value)*
+    key_value                   = identifier sp "=" sp complex_identifier
+    complex_identifier_list     = complex_identifier (sp "," sp complex_identifier)*
+    complex_identifier          = identifier ( "." identifier )*
+
+    identifier      = ~r"[a-zA-Z0-9_]+"
+    ws              = ~r"[\r\n\t ]*"
+    sp              = ~r"[ \t]*"
+    newline         = "\n"
 '''
 
 EXAMPLE_SOURCE = '''

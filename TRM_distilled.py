@@ -41,14 +41,15 @@ class TRM(Module):
         self.y_embed = Linear(d_y, d_z)
         self.y_unbed = Linear(d_z, d_y)
         self.network = Linear(d_z * 3, d_z)
-        self.qualeval = Linear(d_z, 1)
+        self.qualeval = Linear(d_z, d_y)
+        self.d_y = d_y
         self.d_z = d_z
     
     def forward(self, xs, T, n):
         batch_size, _ = xs.shape
 
         xs_e = self.x_embed(xs)
-        ys = torch.randn(batch_size, 1)
+        ys = torch.randn(batch_size, self.d_y)
         ys_e = self.y_embed(ys)
         zs = torch.randn(batch_size, self.d_z)
 
@@ -87,11 +88,8 @@ def run(N_sup, T, n, lr, epochs, seed):
             for N in range(N_sup):
                 y_hat, q_hat = model(xs, T, n)
                 ce = F.binary_cross_entropy(y_hat, ys)
-
-                # quality gets detached, no gradient flow
-                quality = (y_hat > 0.5) == ys
-                act = F.binary_cross_entropy(q_hat, quality.float())
-
+                quality = ((y_hat > 0.5) == ys).float()  # detaches
+                act = F.binary_cross_entropy(q_hat, quality)
                 loss = ce + 0.5 * act
                 loss.backward()
                 opt.step()

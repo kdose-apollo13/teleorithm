@@ -35,44 +35,41 @@ loader = DataLoader(dataset=dataset, batch_size=16, shuffle=True)
 
 
 class TRM(Module):
-    def __init__(self, in_dim=2, enc_dim=8, out_dim=1):
+    def __init__(self, d_x=2, d_z=8, d_y=1):
         super().__init__()
-        self.enc_dim = enc_dim
-
-        self.x_enc = Linear(in_dim, enc_dim)
-        self.y_enc = Linear(out_dim, enc_dim)
-        self.y_dec = Linear(enc_dim, out_dim)
-        self.net = Linear(3 * enc_dim, enc_dim)
-
-        self.q_head = Linear(enc_dim, 1)
+        self.x_embed = Linear(d_x, d_z)
+        self.y_embed = Linear(d_y, d_z)
+        self.y_unbed = Linear(d_z, d_y)
+        self.network = Linear(d_z * 3, d_z)
+        self.qualeval = Linear(d_z, 1)
+        self.d_z = d_z
     
     def forward(self, xs, T, n):
         batch_size, _ = xs.shape
 
-        xs_e = self.x_enc(xs)
+        xs_e = self.x_embed(xs)
         ys = torch.randn(batch_size, 1)
-        ys_e = self.y_enc(ys)
-        zs = torch.randn(batch_size, self.enc_dim)
+        ys_e = self.y_embed(ys)
+        zs = torch.randn(batch_size, self.d_z)
 
         null = torch.zeros_like(xs_e)
-
-        def dream(xs, ys, zs):
-            """RUNS NET"""
-            o = torch.cat([xs, ys, zs], dim=-1)
-            return torch.tanh(self.net(o))
+        
+        def query(latent, xs, ys, zs):
+            w = torch.cat([xs, ys, zs], dim=-1)
+            return F.tanh(latent(w))
 
         with torch.no_grad():
             for _ in range(T-1):
                 for _ in range(n):
-                    zs = dream(xs_e, ys_e, zs)
-                ys_e = dream(null, ys_e, zs)
-                
-        for _ in range(n):
-            zs = dream(xs_e, ys_e, zs)
-        ys_e = dream(null, ys_e, zs)
+                    zs = query(self.network, xs_e, ys_e, zs)
+                ys_e = query(self.network, null, ys_e, zs)
 
-        y_hat = self.y_dec(ys_e)
-        q_hat = torch.sigmoid(self.q_head(ys_e))
+        for _ in range(n):
+            zs = query(self.network, xs_e, ys_e, zs)
+        ys_e = query(self.network, null, ys_e, zs)
+
+        y_hat = F.sigmoid(self.y_unbed(ys_e))
+        q_hat = F.sigmoid(self.qualeval(ys_e))
 
         return y_hat, q_hat
 
@@ -89,10 +86,10 @@ def run(N_sup, T, n, lr, epochs, seed):
         for xs, ys in loader:
             for N in range(N_sup):
                 y_hat, q_hat = model(xs, T, n)
-                ce = F.binary_cross_entropy_with_logits(y_hat, ys)
+                ce = F.binary_cross_entropy(y_hat, ys)
 
                 # quality gets detached, no gradient flow
-                quality = (F.sigmoid(y_hat) > 0.5) == ys
+                quality = (y_hat > 0.5) == ys
                 act = F.binary_cross_entropy(q_hat, quality.float())
 
                 loss = ce + 0.5 * act
@@ -101,10 +98,13 @@ def run(N_sup, T, n, lr, epochs, seed):
                 opt.zero_grad()
                 total_loss += loss.item()
 
+        # if epoch % 2 == 0:
+        #     print(f'loss: {total_loss:.4f}')
+
     model.eval()
     with torch.no_grad():
         y_hat, _ = model(x, T, n)
-        blunted = F.sigmoid(y_hat) > 0.5
+        blunted = y_hat > 0.5
         acc = (blunted == y).float().mean().item()
 
     return acc
@@ -115,17 +115,17 @@ if __name__ == '__main__':
     from statistics import mean
 
     N_sup = 3
-    T = 1
+    T = 2
     n = 3
     lr = 0.02
     epochs = 11
 
     # runtime on cpu ~ 1s x runs (eg) 20 runs -> 20 seconds
-    runs = 10
+    runs = 0
     seeds = [randint(1, 1_000_000) for _ in range(runs)]
 
     accs = []
-    for s in seeds:
+    for s in [23] + seeds:
         a = run(N_sup, T, n, lr, epochs, s)
         accs.append(a)
 

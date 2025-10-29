@@ -31,7 +31,7 @@ x = x.repeat(25, 1)
 y = y.repeat(25, 1)
 
 dataset = TensorDataset(x, y)
-loader = DataLoader(dataset=dataset, batch_size=20, shuffle=True)
+loader = DataLoader(dataset=dataset, batch_size=16, shuffle=True)
 
 
 class TRM(Module):
@@ -86,25 +86,20 @@ def run(N_sup, T, n, lr, epochs, seed):
     model.train()
     for epoch in range(epochs):
         total_loss = 0
-
         for xs, ys in loader:
-            # accumulate gradients?
-            opt.zero_grad()
             for N in range(N_sup):
-                # 
                 y_hat, q_hat = model(xs, T, n)
-                # 
                 ce = F.binary_cross_entropy_with_logits(y_hat, ys)
+
+                # quality gets detached, no gradient flow
                 quality = (F.sigmoid(y_hat) > 0.5) == ys
                 act = F.binary_cross_entropy(q_hat, quality.float())
+
                 loss = ce + 0.5 * act
-                #
-                # opt.zero_grad()
                 loss.backward()
                 opt.step()
-                # total_loss += loss.item()
-                # scale by N_sup?
-                total_loss += (loss / N_sup).item()
+                opt.zero_grad()
+                total_loss += loss.item()
 
     model.eval()
     with torch.no_grad():
@@ -112,7 +107,6 @@ def run(N_sup, T, n, lr, epochs, seed):
         blunted = F.sigmoid(y_hat) > 0.5
         acc = (blunted == y).float().mean().item()
 
-    # print('first 10:', blunted[:10].to(torch.int8).flatten())
     return acc
 
 
@@ -124,9 +118,9 @@ if __name__ == '__main__':
     T = 1
     n = 3
     lr = 0.02
-    epochs = 17
+    epochs = 11
 
-    # expect runtime T ~ 1 s * runs (eg) 20 runs -> 20 seconds on cpu
+    # runtime on cpu ~ 1s x runs (eg) 20 runs -> 20 seconds
     runs = 10
     seeds = [randint(1, 1_000_000) for _ in range(runs)]
 
